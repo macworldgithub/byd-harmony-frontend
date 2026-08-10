@@ -1,10 +1,13 @@
 import { cn } from "@/lib/cn";
 
-type BadgeTone = "green" | "blue" | "neutral";
+type BadgeTone = "green" | "blue" | "orange" | "red" | "purple" | "neutral";
 
 const toneClasses: Record<BadgeTone, string> = {
   green: "bg-emerald-50 text-emerald-700",
   blue: "bg-blue-50 text-blue-700",
+  orange: "bg-orange-50 text-orange-700",
+  red: "bg-rose-50 text-rose-700",
+  purple: "bg-purple-50 text-purple-700",
   neutral: "bg-neutral-100 text-neutral-600",
 };
 

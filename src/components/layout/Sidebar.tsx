@@ -11,7 +11,7 @@ export function Sidebar({ role }: { role: RoleConfig }) {
   const a = accentMap[role.accent];
 
   return (
-    <aside className="flex h-screen w-[218px] shrink-0 flex-col border-r border-neutral-200 bg-white">
+    <aside className="sticky top-0 flex h-screen w-[218px] shrink-0 flex-col border-r border-neutral-200 bg-white">
       <div className="px-5 pb-4 pt-5">
         <div className="flex items-center gap-2">
           <Image
