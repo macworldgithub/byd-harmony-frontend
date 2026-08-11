@@ -25,10 +25,43 @@ import {
   Bell,
   Send,
   Star,
+  Activity,
 } from "lucide-react";
 import type { RoleConfig } from "@/lib/types";
 
 export const roles: Record<string, RoleConfig> = {
+  operations: {
+    slug: "operations",
+    roleLabel: "Operations",
+    roleIcon: Activity,
+    accent: "red",
+    contextLine: "All Sites — BYD Harmony",
+    scopeLine: "BYD Harmony Automotive ...",
+    sections: [
+      {
+        title: "Operations",
+        links: [
+          { label: "Dashboard", href: "/operations", icon: LayoutGrid },
+          { label: "Customers", href: "/operations/customers", icon: Users },
+          { label: "Service Bookings", href: "/operations/bookings", icon: Calendar },
+          { label: "Job Cards", href: "/operations/job-cards", icon: ClipboardList },
+          { label: "Documents", href: "/operations/documents", icon: FileText },
+          { label: "Locations", href: "/operations/locations", icon: MapPin },
+        ],
+      },
+      {
+        title: "System",
+        links: [
+          { label: "Executive", href: "/site-executive", icon: TrendingUp },
+          { label: "Live Comms", href: "/operations/live-comms", icon: Radio },
+          { label: "API Keys", href: "/operations/api-keys", icon: KeyRound },
+          { label: "API Docs", href: "/operations/api-docs", icon: BookOpen },
+          { label: "Settings", href: "/operations/settings", icon: Settings },
+        ],
+      },
+    ],
+  },
+
   admin: {
     slug: "admin",
     roleLabel: "Super Admin",

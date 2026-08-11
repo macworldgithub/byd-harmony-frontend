@@ -14,7 +14,7 @@ export default function SiteStaffPage() {
         <Users className="h-10 w-10 text-neutral-300 mb-4" />
         <h2 className="text-base font-semibold text-neutral-900">Staff management is handled by Super Admin</h2>
         <p className="mt-1 text-sm text-neutral-500">Contact your Super Admin to add, remove, or modify staff roles and access levels.</p>
-        <Link href="/admin/staff" className="mt-2 text-sm font-medium text-rose-600 hover:underline">
+        <Link href="/admin/staff-permissions" className="mt-2 text-sm font-medium text-rose-600 hover:underline">
           Go to Super Admin → Staff →
         </Link>
       </Panel>

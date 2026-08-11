@@ -6,7 +6,10 @@ export default function SiteJobCardsPage() {
     <div>
       <PageHeader title="Site Job Cards" />
       <div className="mt-4">
-        <Link href="/admin/job-cards" className="text-rose-600 hover:underline">
+        <Link
+          href="/operations/job-cards"
+          className="text-rose-600 hover:underline"
+        >
           Open Job Cards →
         </Link>
       </div>
