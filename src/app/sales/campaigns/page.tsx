@@ -12,10 +12,11 @@ export default function SalesCampaignsPage() {
       <Panel className="mt-6 max-w-2xl text-center py-16 border-neutral-200 flex flex-col items-center mx-auto">
         <h2 className="text-lg font-semibold text-neutral-900">Bulk campaigns</h2>
         <p className="mt-2 text-neutral-500 mb-6 text-sm">Send targeted messages to groups of customers.</p>
-        <Link href="#" className="text-rose-600 font-medium hover:underline text-sm">
+        <Link href="/sales/bulk-sms" className="text-rose-600 font-medium hover:underline text-sm">
           Open Bulk SMS tool →
         </Link>
       </Panel>
     </div>
   );
 }
+
