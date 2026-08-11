@@ -52,7 +52,7 @@ export const roles: Record<string, RoleConfig> = {
       {
         title: "System",
         links: [
-          { label: "Executive", href: "/site-executive", icon: TrendingUp },
+          { label: "Executive", href: "/operations/executive", icon: TrendingUp },
           { label: "Live Comms", href: "/operations/live-comms", icon: Radio },
           { label: "API Keys", href: "/operations/api-keys", icon: KeyRound },
           { label: "API Docs", href: "/operations/api-docs", icon: BookOpen },
