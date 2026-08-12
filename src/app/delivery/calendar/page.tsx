@@ -6,7 +6,7 @@ import { BigStatCard } from "@/components/dashboard/StatCard";
 import { Panel, PanelHeader } from "@/components/dashboard/Panel";
 import { DeliveryListItem } from "@/components/queue/DeliveryListItem";
 import { Truck, Plus, X } from "lucide-react";
-// local display values for the calendar view (show empty state matching screenshot)
+
 const calendarStats = { today: 0, thisWeek: 0, totalScheduled: 0 };
 const todaysDeliveriesLocal: Array<{
   id: string;
@@ -14,13 +14,13 @@ const todaysDeliveriesLocal: Array<{
   detail?: string;
 }> = [];
 
-export default function DeliveryQueuePage() {
+export default function DeliveryCalendarPage() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   return (
     <div>
       <PageHeader
-        title="Delivery Queue"
+        title="Delivery Calendar"
         subtitle={`${calendarStats.today} today · 0 upcoming`}
         action={
           <button
@@ -81,7 +81,7 @@ export default function DeliveryQueuePage() {
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-neutral-800">
-                  Delivery Date & Time *
+                  Delivery Date &amp; Time *
                 </label>
                 <input
                   type="text"
@@ -144,7 +144,7 @@ export default function DeliveryQueuePage() {
           <div className="border-b border-neutral-100 px-5 py-4">
             <PanelHeader
               title="Today's Deliveries"
-              action={<Truck className="h-4 w-4 text-rose-500" />}
+              //   action={<Truck className="h-4 w-4 text-rose-500" />}
             />
           </div>
           <div className="p-6">
