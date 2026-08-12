@@ -106,14 +106,14 @@ export default function OperationsDashboardPage() {
         action={
           <div className="flex gap-2">
             <Link
-              href="/operations/bookings/new"
+              href="/operations/bookings"
               className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
             >
               <Calendar className="h-4 w-4" />
               New Booking
             </Link>
             <Link
-              href="/operations/customers/new"
+              href="/operations/customers"
               className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors"
             >
               <Plus className="h-4 w-4" />
