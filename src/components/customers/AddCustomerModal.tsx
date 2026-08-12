@@ -36,7 +36,14 @@ export interface CustomerFormValues {
   consentPhone: boolean;
   notes: string;
 }
-
+type Location = {
+  _id: string;
+  name: string;
+  address: string;
+  suburb: string;
+  state: string;
+  postcode: string;
+};
 const INITIAL_VALUES: CustomerFormValues = {
   firstName: "",
   lastName: "",
@@ -75,6 +82,9 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCustomerModa
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
+  // inside the component, with other useState:
+const [locations, setLocations] = useState<Location[]>([]);
+const [locationsLoading, setLocationsLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -84,7 +94,36 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCustomerModa
       setTimeout(() => firstNameRef.current?.focus(), 80);
     }
   }, [isOpen]);
+useEffect(() => {
+  if (!isOpen) return;
 
+  setValues(INITIAL_VALUES);
+  setError(null);
+  setIsLoading(false);
+  setTimeout(() => firstNameRef.current?.focus(), 80);
+
+  // load locations
+  const loadLocations = async () => {
+    setLocationsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/locations`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data?.data)) {
+        setLocations(data.data);
+      } else {
+        setLocations([]);
+      }
+    } catch {
+      setLocations([]);
+    } finally {
+      setLocationsLoading(false);
+    }
+  };
+
+  loadLocations();
+}, [isOpen]);
   const update = <K extends keyof CustomerFormValues>(key: K, value: CustomerFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
@@ -318,16 +357,24 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCustomerModa
           </Field>
         </div>
 
-        <Field label="Preferred location ID">
-          <input
-            type="text"
-            value={values.preferredLocationId}
-            onChange={(e) => update("preferredLocationId", e.target.value)}
-            disabled={isLoading}
-            placeholder="Optional location UUID"
-            className={inputClass}
-          />
-        </Field>
+        <Field label="Preferred location">
+  <select
+    value={values.preferredLocationId}
+    onChange={(e) => update("preferredLocationId", e.target.value)}
+    disabled={isLoading || locationsLoading}
+    className={inputClass}
+  >
+    <option value="">
+      {locationsLoading ? "Loading locations..." : "Select a location (optional)"}
+    </option>
+    {locations.map((loc) => (
+      <option key={loc._id} value={loc._id}>
+        {loc.name} — {loc.state}, {loc.address}
+        {loc.suburb ? `, ${loc.suburb}` : ""}
+      </option>
+    ))}
+  </select>
+</Field>
 
         <div>
           <p className="mb-2 text-sm font-semibold text-neutral-700">Communication consent</p>
