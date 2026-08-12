@@ -9,7 +9,10 @@ export default function SalesTemplatesPage() {
         subtitle="Manage reusable SMS and email templates for sales communications."
       />
       <div className="mt-6">
-        <Link href="/sales/templates-library" className="text-rose-600 font-medium hover:underline text-sm">
+        <Link
+          href="/operations/templates-library"
+          className="text-rose-600 font-medium hover:underline text-sm"
+        >
           Open Templates Library →
         </Link>
       </div>
