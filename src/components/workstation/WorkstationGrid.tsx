@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { workstations } from "@/lib/data/workstations";
 import { WorkstationCard } from "./WorkstationCard";
+import { LoginModal } from "@/components/login/LoginModal";
 import { MapPin, ChevronRight } from "lucide-react";
 import type { Workstation } from "@/lib/types";
 
@@ -20,13 +21,13 @@ const sites = [
 export function WorkstationGrid() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<Workstation | null>(null);
+  const [loginTarget, setLoginTarget] = useState<Workstation | null>(null);
 
   const handleCardClick = (workstation: Workstation) => {
-    // If the workstation is Super Admin or Executive, navigate directly.
-    if (
-      workstation.slug === "super-admin" ||
-      workstation.slug === "executive"
-    ) {
+    if (workstation.slug === "super-admin") {
+      // Open login modal for Super Admin
+      setLoginTarget(workstation);
+    } else if (workstation.slug === "executive") {
       router.push(workstation.href);
     } else {
       // Otherwise, open the site selection modal.
@@ -123,6 +124,13 @@ export function WorkstationGrid() {
           </div>
         </div>
       )}
+
+      {/* Super Admin Login Modal */}
+      <LoginModal
+        isOpen={loginTarget !== null}
+        onClose={() => setLoginTarget(null)}
+        redirectHref={loginTarget?.href ?? "/admin"}
+      />
     </section>
   );
 }

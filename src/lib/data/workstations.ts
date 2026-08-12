@@ -1,4 +1,11 @@
-import { Shield, TrendingUp, Building2, Wrench, Truck, ShoppingCart } from "lucide-react";
+import {
+  Shield,
+  TrendingUp,
+  Building2,
+  Wrench,
+  Truck,
+  ShoppingCart,
+} from "lucide-react";
 import type { Workstation } from "@/lib/types";
 
 export const workstations: Workstation[] = [
