@@ -16,6 +16,7 @@ const sites = [
   },
   { id: "s-2", name: "BYD Nunawading", detail: "Combined · Nunawading" },
   { id: "s-3", name: "Denza Melbourne", detail: "Combined · Melbourne" },
+  { id: "s-4", name: "Good Showroom", detail: "Combined · Downtown" },
 ];
 
 export function WorkstationGrid() {
