@@ -8,8 +8,13 @@ import { MapPin, ChevronRight } from "lucide-react";
 import type { Workstation } from "@/lib/types";
 
 const sites = [
-  { id: "s-1", name: "BYD 2", detail: "Combined · Jasjdajds" },
-  { id: "s-2", name: "BYD Harmony Automotive — Richmond", detail: "Combined · Richmond" },
+  {
+    id: "s-1",
+    name: "BYD Caroline Springs",
+    detail: "Combined · Caroline Springs",
+  },
+  { id: "s-2", name: "BYD Nunawading", detail: "Combined · Nunawading" },
+  { id: "s-3", name: "Denza Melbourne", detail: "Combined · Melbourne" },
 ];
 
 export function WorkstationGrid() {
@@ -18,7 +23,10 @@ export function WorkstationGrid() {
 
   const handleCardClick = (workstation: Workstation) => {
     // If the workstation is Super Admin or Executive, navigate directly.
-    if (workstation.slug === "super-admin" || workstation.slug === "executive") {
+    if (
+      workstation.slug === "super-admin" ||
+      workstation.slug === "executive"
+    ) {
       router.push(workstation.href);
     } else {
       // Otherwise, open the site selection modal.
@@ -28,7 +36,7 @@ export function WorkstationGrid() {
 
   const handleSiteSelect = (siteId: string) => {
     if (selectedRole) {
-      router.push(selectedRole.href);
+      router.push(`${selectedRole.href}?site=${siteId}`);
     }
   };
 
@@ -43,16 +51,17 @@ export function WorkstationGrid() {
           Select your workstation
         </h1>
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-neutral-500">
-          During development, choose any role to preview and test that workstation&apos;s full
-          functionality. In production this screen is replaced by authentication.
+          During development, choose any role to preview and test that
+          workstation&apos;s full functionality. In production this screen is
+          replaced by authentication.
         </p>
       </div>
 
       <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {workstations.map((w) => (
-          <WorkstationCard 
-            key={w.slug} 
-            workstation={w} 
+          <WorkstationCard
+            key={w.slug}
+            workstation={w}
             onClick={() => handleCardClick(w)}
           />
         ))}
@@ -60,19 +69,23 @@ export function WorkstationGrid() {
 
       {selectedRole && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div 
+          <div
             className="absolute inset-0 bg-neutral-900/10 backdrop-blur-sm"
             onClick={() => setSelectedRole(null)}
           />
-          
+
           <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white p-6 shadow-xl ring-1 ring-neutral-200">
             <div className="mb-6 flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-600">
                 <MapPin className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-[17px] font-bold text-neutral-900">Select your site</h2>
-                <p className="text-sm text-neutral-500">{selectedRole.name} workstation</p>
+                <h2 className="text-[17px] font-bold text-neutral-900">
+                  Select your site
+                </h2>
+                <p className="text-sm text-neutral-500">
+                  {selectedRole.name} workstation
+                </p>
               </div>
             </div>
 
@@ -88,7 +101,9 @@ export function WorkstationGrid() {
                       <MapPin className="h-5 w-5 text-neutral-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-neutral-900">{site.name}</p>
+                      <p className="text-sm font-bold text-neutral-900">
+                        {site.name}
+                      </p>
                       <p className="text-xs text-neutral-500">{site.detail}</p>
                     </div>
                   </div>
