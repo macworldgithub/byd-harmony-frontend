@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { UserPlus, Loader2 } from "lucide-react";
+import { API_URL } from "@/lib/config";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
+// const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
 
 export type LifecycleStage = "prospect" | "active" | "service" | "inactive" | "archived";
 
@@ -123,7 +124,7 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCustomerModa
         notes: values.notes.trim() || undefined,
       };
 
-      const res = await fetch(`${API_BASE}/api/v1/customers`, {
+      const res = await fetch(`${API_URL}/customers`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(body),
