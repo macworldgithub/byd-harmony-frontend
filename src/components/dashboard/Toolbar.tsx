@@ -5,11 +5,15 @@ export function Toolbar({
   filterLabel,
   ctaLabel,
   onCtaClick,
+  searchValue,
+  onSearchChange,
 }: {
   searchPlaceholder: string;
   filterLabel?: string;
   ctaLabel?: string;
   onCtaClick?: () => void;
+  searchValue?: string;
+  onSearchChange?: (val: string) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -18,6 +22,8 @@ export function Toolbar({
         <input
           type="text"
           placeholder={searchPlaceholder}
+          value={searchValue}
+          onChange={(e) => onSearchChange?.(e.target.value)}
           className="w-56 rounded-lg border border-neutral-200 bg-white py-2 pl-9 pr-3 text-sm text-neutral-700 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none"
         />
       </div>
