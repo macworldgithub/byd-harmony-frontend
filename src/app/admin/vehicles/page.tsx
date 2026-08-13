@@ -1,79 +1,318 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { Toolbar } from "@/components/dashboard/Toolbar";
-import { Car } from "lucide-react";
+import { Car, Pencil, Trash2, Loader2, Eye } from "lucide-react";
+import { VehicleModal } from "@/components/vehicles/VehicleModal";
+import { VehicleDetailsModal } from "@/components/vehicles/VehicleDetailsModal";
+import { API_URL } from "@/lib/config";
 
-type VehicleStatus = "Active" | "In Service" | "Delivered" | "Pending";
+type VehicleStatus = "active" | "disposed" | "traded" | "written_off";
 
-const statusTone: Record<VehicleStatus, "green" | "orange" | "blue" | "neutral"> = {
-  Active: "green",
-  "In Service": "orange",
-  Delivered: "blue",
-  Pending: "neutral",
+const statusTone: Record<VehicleStatus, "green" | "orange" | "blue" | "neutral" | "red"> = {
+  active: "green",
+  disposed: "neutral",
+  traded: "blue",
+  written_off: "red",
 };
 
-const vehicles = [
-  { id: "v-1",  make: "BYD",  model: "Atto 3",    year: 2024, color: "Pearl White",  rego: "1AB2CD",  vin: "LSVAU2185N2100001", owner: "Lee Atkinson",   site: "Richmond",  status: "Active"     as VehicleStatus, odometer: "12,000 km" },
-  { id: "v-2",  make: "BYD",  model: "Seal",       year: 2024, color: "Cosmos Black", rego: "2EF3GH",  vin: "LSVAU2185N2100002", owner: "John Smith",     site: "Richmond",  status: "In Service" as VehicleStatus, odometer: "8,500 km"  },
-  { id: "v-3",  make: "BYD",  model: "Dolphin",    year: 2023, color: "Sky Blue",     rego: "3IJ4KL",  vin: "LSVAU2185N2100003", owner: "Sarah Mitchell", site: "BYD 2",     status: "Delivered"  as VehicleStatus, odometer: "24,300 km" },
-  { id: "v-4",  make: "BYD",  model: "Han EV",     year: 2024, color: "Surf Silver",  rego: "4MN5OP",  vin: "LSVAU2185N2100004", owner: "James Tran",     site: "Richmond",  status: "Active"     as VehicleStatus, odometer: "5,100 km"  },
-  { id: "v-5",  make: "BYD",  model: "Tang EV",    year: 2023, color: "Aurora Gray",  rego: "5QR6ST",  vin: "LSVAU2185N2100005", owner: "Priya Sharma",   site: "Richmond",  status: "Pending"    as VehicleStatus, odometer: "0 km"      },
-  { id: "v-6",  make: "BYD",  model: "Atto 3",    year: 2023, color: "Forest Green", rego: "6UV7WX",  vin: "LSVAU2185N2100006", owner: "David Lee",      site: "BYD 2",     status: "In Service" as VehicleStatus, odometer: "31,200 km" },
-  { id: "v-7",  make: "BYD",  model: "Seal U",     year: 2024, color: "Polar White",  rego: "7YZ8AB",  vin: "LSVAU2185N2100007", owner: "Emma Wilson",    site: "Richmond",  status: "Active"     as VehicleStatus, odometer: "3,800 km"  },
-];
+const statusLabel: Record<VehicleStatus, string> = {
+  active: "Active",
+  disposed: "Disposed",
+  traded: "Traded",
+  written_off: "Written Off",
+};
+
+interface Vehicle {
+  _id: string;
+  id?: string;
+  customerId: string;
+  vin: string;
+  rego: string;
+  make: string;
+  model: string;
+  year: number;
+  colour: string;
+  odometer: number;
+  status: VehicleStatus;
+  deliveredAt: string;
+  nextServiceDue: string;
+  warrantyExpiry: string;
+}
 
 export default function AdminVehiclesPage() {
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [viewingVehicle, setViewingVehicle] = useState<Vehicle | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const fetchVehicles = async (query = "") => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const url = query.trim() ? `${API_URL}/vehicles/search?q=${encodeURIComponent(query.trim())}` : `${API_URL}/vehicles`;
+      const res = await fetch(url, { headers });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to fetch vehicles");
+      }
+
+      setVehicles(data.data || data || []);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchVehicles(searchQuery);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const handleDelete = async (vehicleId: string) => {
+    if (!confirm("Are you sure you want to delete this vehicle?")) return;
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      const headers: HeadersInit = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_URL}/vehicles/${vehicleId}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to delete vehicle");
+      }
+
+      setVehicles((prev) => prev.filter((v) => (v._id || v.id) !== vehicleId));
+    } catch (err: any) {
+      alert(err.message || "Error deleting vehicle.");
+    }
+  };
+
+  const handleOpenAddModal = () => {
+    setSelectedVehicle(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = async (vehicle: Vehicle, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    // If the vehicle came from a search result, it might only have partial data.
+    // Let's fetch the full vehicle details by ID before editing.
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      const headers: HeadersInit = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const vid = vehicle._id || vehicle.id;
+      if (vid) {
+        const res = await fetch(`${API_URL}/vehicles/${vid}`, { headers });
+        const data = await res.json();
+        if (res.ok && data.data) {
+          const vehicleData = Array.isArray(data.data) ? data.data[0] : data.data;
+          if (vehicleData) {
+            setSelectedVehicle(vehicleData);
+            setIsModalOpen(true);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch full vehicle details, falling back to basic data.", err);
+    }
+    
+    // Fallback if fetch fails or no ID
+    setSelectedVehicle(vehicle);
+    setIsModalOpen(true);
+  };
+
+  const handleRowClick = async (vehicle: Vehicle) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      const headers: HeadersInit = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const vid = vehicle._id || vehicle.id;
+      if (vid) {
+        const res = await fetch(`${API_URL}/vehicles/${vid}`, { headers });
+        const data = await res.json();
+        if (res.ok && data.data) {
+          const vehicleData = Array.isArray(data.data) ? data.data[0] : data.data;
+          if (vehicleData) {
+            setViewingVehicle(vehicleData);
+            setIsDetailsModalOpen(true);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch full vehicle details.", err);
+    }
+    
+    // Fallback
+    setViewingVehicle(vehicle);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleModalSuccess = () => {
+    fetchVehicles(searchQuery);
+  };
+
   return (
     <div>
       <PageHeader
         title="All Vehicles"
         subtitle="Platform-wide vehicle records across all sites."
-        action={<Toolbar searchPlaceholder="Search by rego, VIN, owner..." filterLabel="All Statuses" ctaLabel="Add Vehicle" />}
+        action={
+          <Toolbar
+            searchPlaceholder="Search by rego, VIN..."
+            filterLabel="All Statuses"
+            ctaLabel="Add Vehicle"
+            onCtaClick={handleOpenAddModal}
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        }
       />
 
-      <p className="mb-4 text-sm text-neutral-500">{vehicles.length} vehicles</p>
-
-      <Panel padded={false}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-100 bg-neutral-50">
-                {["Vehicle", "Registration", "VIN", "Owner", "Site", "Odometer", "Status"].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-neutral-500">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {vehicles.map((v) => (
-                <tr key={v.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100">
-                        <Car className="h-4 w-4 text-neutral-500" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-neutral-900">{v.year} {v.make} {v.model}</p>
-                        <p className="text-xs text-neutral-400">{v.color}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5 font-mono text-xs text-neutral-700">{v.rego}</td>
-                  <td className="px-5 py-3.5 font-mono text-xs text-neutral-500">{v.vin}</td>
-                  <td className="px-5 py-3.5 text-neutral-600">{v.owner}</td>
-                  <td className="px-5 py-3.5 text-neutral-500">{v.site}</td>
-                  <td className="px-5 py-3.5 text-neutral-500">{v.odometer}</td>
-                  <td className="px-5 py-3.5">
-                    <Badge tone={statusTone[v.status]}>{v.status}</Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Error: {error}
         </div>
-      </Panel>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20 text-neutral-400">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      ) : (
+        <>
+          <p className="mb-4 text-sm text-neutral-500">{vehicles.length} vehicles</p>
+          <Panel padded={false}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100 bg-neutral-50">
+                    {["Vehicle", "Registration", "VIN", "Customer ID", "Odometer", "Status", "Actions"].map((h) => (
+                      <th key={h} className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-neutral-500">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {vehicles.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-8 text-center text-neutral-500">
+                        No vehicles found. Click "Add Vehicle" to create one.
+                      </td>
+                    </tr>
+                  ) : (
+                    vehicles.map((v) => {
+                      const id = v._id || v.id || Math.random().toString();
+                      const rawCustomer = v.customerId || (v as any).customer;
+                      const customerDisplay =
+                        typeof rawCustomer === "object" && rawCustomer !== null
+                          ? [rawCustomer.firstName, rawCustomer.lastName].filter(Boolean).join(" ") ||
+                            rawCustomer.name ||
+                            rawCustomer.email ||
+                            rawCustomer._id ||
+                            "-"
+                          : rawCustomer || "-";
+
+                      return (
+                        <tr 
+                          key={id} 
+                          onClick={() => handleRowClick(v)}
+                          className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors cursor-pointer"
+                        >
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100">
+                                <Car className="h-4 w-4 text-neutral-500" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-neutral-900">{v.year} {v.make} {v.model}</p>
+                                <p className="text-xs text-neutral-400">{v.colour || "No colour"}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 font-mono text-xs text-neutral-700">{v.rego}</td>
+                          <td className="px-5 py-3.5 font-mono text-xs text-neutral-500">{v.vin}</td>
+                          <td className="px-5 py-3.5 text-neutral-600">{customerDisplay}</td>
+                          <td className="px-5 py-3.5 text-neutral-500">
+                            {v.odometer != null ? `${v.odometer} km` : "N/A"}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Badge tone={v.status ? (statusTone[v.status] || "neutral") : "neutral"}>
+                              {v.status ? (statusLabel[v.status] || v.status) : "Unknown"}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => handleOpenEditModal(v, e)}
+                                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
+                                title="Edit Vehicle"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(id);
+                                }}
+                                className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                title="Delete Vehicle"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        </>
+      )}
+
+      <VehicleModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleModalSuccess}
+        vehicle={selectedVehicle}
+      />
+      
+      <VehicleDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        vehicle={viewingVehicle}
+      />
     </div>
   );
 }
