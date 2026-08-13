@@ -1,6 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import Link from "next/link";
-import { Search, Plus, ChevronRight, Phone, Mail, MessageSquare, Clock } from "lucide-react";
+import {
+  Search,
+  Plus,
+  ChevronRight,
+  Phone,
+  Mail,
+  MessageSquare,
+  Clock,
+  X,
+} from "lucide-react";
 
 const customers = [
   {
@@ -13,47 +24,20 @@ const customers = [
     tag: "Service",
     messages: 1,
     activities: [
-      { text: "Customer called to confirm service appointment", time: "less than a minute ago" },
-      { text: "Job BYD-00006 status: in_progress", time: "less than a minute ago" },
-      { text: "Job card BYD-00006 created — normal priority", time: "less than a minute ago" },
+      {
+        text: "Customer called to confirm service appointment",
+        time: "less than a minute ago",
+      },
+      {
+        text: "Job BYD-00006 status: in_progress",
+        time: "less than a minute ago",
+      },
+      {
+        text: "Job card BYD-00006 created — normal priority",
+        time: "less than a minute ago",
+      },
     ],
     lastSeen: "less than a minute ago",
-    hasNote: true,
-    isAuto: false,
-  },
-  {
-    id: "c-2",
-    name: "John Smith",
-    initials: "JS",
-    status: "ACTIVE",
-    phone: "0412345678",
-    email: "john@example.com",
-    tag: "Service",
-    messages: 1,
-    activities: [
-      { text: "Customer called to confirm service appointment", time: "1 minute ago" },
-      { text: "Job BYD-00005 status: in_progress", time: "1 minute ago" },
-      { text: "Job card BYD-00005 created — normal priority", time: "1 minute ago" },
-    ],
-    lastSeen: "1 minute ago",
-    hasNote: true,
-    isAuto: false,
-  },
-  {
-    id: "c-3",
-    name: "John Smith",
-    initials: "JS",
-    status: "ACTIVE",
-    phone: "0412345678",
-    email: "john@example.com",
-    tag: "Service",
-    messages: 1,
-    activities: [
-      { text: "Customer called to confirm service appointment", time: "1 minute ago" },
-      { text: "Job BYD-00004 status: in_progress", time: "1 minute ago" },
-      { text: "Job card BYD-00004 created — normal priority", time: "1 minute ago" },
-    ],
-    lastSeen: "1 minute ago",
     hasNote: true,
     isAuto: false,
   },
@@ -67,68 +51,46 @@ const customers = [
     tag: "Service",
     messages: 1,
     activities: [
-      { text: "Customer called to confirm service appointment", time: "about 4 hours ago" },
+      {
+        text: "Customer called to confirm service appointment",
+        time: "about 4 hours ago",
+      },
       { text: "Job BYD-00002 status: in_progress", time: "about 4 hours ago" },
-      { text: "Job card BYD-00002 created — normal priority", time: "about 4 hours ago" },
+      {
+        text: "Job card BYD-00002 created — normal priority",
+        time: "about 4 hours ago",
+      },
     ],
     lastSeen: "about 4 hours ago",
     hasNote: true,
     isAuto: false,
-  },
-  {
-    id: "c-5",
-    name: "John Smith",
-    initials: "JS",
-    status: "ACTIVE",
-    phone: "0412345678",
-    email: "john@example.com",
-    tag: "Service",
-    messages: 1,
-    activities: [
-      { text: "Customer called to confirm service appointment", time: "about 4 hours ago" },
-      { text: "Job BYD-00003 status: in_progress", time: "about 4 hours ago" },
-      { text: "Job card BYD-00003 created — normal priority", time: "about 4 hours ago" },
-    ],
-    lastSeen: "about 4 hours ago",
-    hasNote: true,
-    isAuto: false,
-  },
-  {
-    id: "c-6",
-    name: "John Smith",
-    initials: "JS",
-    status: "ACTIVE",
-    phone: "0412345678",
-    email: "john@example.com",
-    tag: "Service",
-    messages: 1,
-    activities: [
-      { text: "Booking status updated to: confirmed", time: "less than a minute ago" },
-      { text: "Booking status updated to: confirmed", time: "1 minute ago" },
-      { text: "Booking status updated to: confirmed", time: "2 minutes ago" },
-    ],
-    lastSeen: "less than a minute ago",
-    hasNote: false,
-    isAuto: true,
   },
 ];
 
-const stages = ["All Stages", "Prospect", "Active", "Service"];
+const stages = [
+  "All Stages",
+  "Prospect",
+  "Active",
+  "Service",
+  "Inactive",
+  "Archived",
+];
 
 export default function OperationsCustomersPage() {
+  const [openModal, setOpenModal] = useState(false);
   return (
     <div>
       <PageHeader
         title="Customers"
         subtitle="Unified profiles, vehicle history, and communication threads"
         action={
-          <Link
-            href="/operations/customers/new"
+          <button
+            onClick={() => setOpenModal(true)}
             className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Customer
-          </Link>
+          </button>
         }
       />
 
@@ -150,7 +112,10 @@ export default function OperationsCustomersPage() {
       </div>
 
       <p className="mb-4 text-sm text-neutral-500">
-        <span className="font-semibold text-neutral-800">{customers.length}</span> customers
+        <span className="font-semibold text-neutral-800">
+          {customers.length}
+        </span>{" "}
+        customers
       </p>
 
       {/* Customer cards grid */}
@@ -171,7 +136,9 @@ export default function OperationsCustomersPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-neutral-900">{c.name}</span>
+                    <span className="text-sm font-semibold text-neutral-900">
+                      {c.name}
+                    </span>
                     <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                       {c.status}
                     </span>
@@ -212,7 +179,9 @@ export default function OperationsCustomersPage() {
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
                     <span className="text-xs text-neutral-600">{act.text}</span>
                   </div>
-                  <span className="shrink-0 text-[10px] text-neutral-400">{act.time}</span>
+                  <span className="shrink-0 text-[10px] text-neutral-400">
+                    {act.time}
+                  </span>
                 </div>
               ))}
             </div>
@@ -242,6 +211,106 @@ export default function OperationsCustomersPage() {
             </div>
           </div>
         ))}
+        {openModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
+            <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-5">
+                <h2 className="text-2xl font-semibold text-neutral-900">
+                  Add Customer
+                </h2>
+
+                <button
+                  onClick={() => setOpenModal(false)}
+                  className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <form className="space-y-5 p-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+
+                    <input
+                      type="text"
+                      autoFocus
+                      className="w-full rounded-lg border border-red-400 px-4 py-2.5 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+
+                    <input
+                      type="text"
+                      className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium">
+                    Email
+                  </label>
+
+                  <input
+                    type="email"
+                    className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium">
+                    Phone
+                  </label>
+
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      Suburb
+                    </label>
+
+                    <input
+                      type="text"
+                      className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      Source
+                    </label>
+
+                    <input
+                      placeholder="Walk-in, Website, BYD.com..."
+                      className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-rose-500"
+                    ></input>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-rose-500 py-3 font-semibold text-white transition hover:bg-rose-600"
+                >
+                  Create Customer
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
