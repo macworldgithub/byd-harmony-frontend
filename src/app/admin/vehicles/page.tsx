@@ -5,8 +5,9 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { Toolbar } from "@/components/dashboard/Toolbar";
-import { Car, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Car, Pencil, Trash2, Loader2, Eye } from "lucide-react";
 import { VehicleModal } from "@/components/vehicles/VehicleModal";
+import { VehicleDetailsModal } from "@/components/vehicles/VehicleDetailsModal";
 import { API_URL } from "@/lib/config";
 
 type VehicleStatus = "active" | "disposed" | "traded" | "written_off";
@@ -50,6 +51,9 @@ export default function AdminVehiclesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [viewingVehicle, setViewingVehicle] = useState<Vehicle | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchVehicles = async (query = "") => {
@@ -112,7 +116,8 @@ export default function AdminVehiclesPage() {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = async (vehicle: Vehicle) => {
+  const handleOpenEditModal = async (vehicle: Vehicle, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     // If the vehicle came from a search result, it might only have partial data.
     // Let's fetch the full vehicle details by ID before editing.
     try {
@@ -125,9 +130,12 @@ export default function AdminVehiclesPage() {
         const res = await fetch(`${API_URL}/vehicles/${vid}`, { headers });
         const data = await res.json();
         if (res.ok && data.data) {
-          setSelectedVehicle(data.data);
-          setIsModalOpen(true);
-          return;
+          const vehicleData = Array.isArray(data.data) ? data.data[0] : data.data;
+          if (vehicleData) {
+            setSelectedVehicle(vehicleData);
+            setIsModalOpen(true);
+            return;
+          }
         }
       }
     } catch (err) {
@@ -137,6 +145,34 @@ export default function AdminVehiclesPage() {
     // Fallback if fetch fails or no ID
     setSelectedVehicle(vehicle);
     setIsModalOpen(true);
+  };
+
+  const handleRowClick = async (vehicle: Vehicle) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      const headers: HeadersInit = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const vid = vehicle._id || vehicle.id;
+      if (vid) {
+        const res = await fetch(`${API_URL}/vehicles/${vid}`, { headers });
+        const data = await res.json();
+        if (res.ok && data.data) {
+          const vehicleData = Array.isArray(data.data) ? data.data[0] : data.data;
+          if (vehicleData) {
+            setViewingVehicle(vehicleData);
+            setIsDetailsModalOpen(true);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch full vehicle details.", err);
+    }
+    
+    // Fallback
+    setViewingVehicle(vehicle);
+    setIsDetailsModalOpen(true);
   };
 
   const handleModalSuccess = () => {
@@ -206,7 +242,11 @@ export default function AdminVehiclesPage() {
                           : rawCustomer || "-";
 
                       return (
-                        <tr key={id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
+                        <tr 
+                          key={id} 
+                          onClick={() => handleRowClick(v)}
+                          className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors cursor-pointer"
+                        >
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2.5">
                               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100">
@@ -232,14 +272,17 @@ export default function AdminVehiclesPage() {
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => handleOpenEditModal(v)}
+                                onClick={(e) => handleOpenEditModal(v, e)}
                                 className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
                                 title="Edit Vehicle"
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleDelete(id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(id);
+                                }}
                                 className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-colors"
                                 title="Delete Vehicle"
                               >
@@ -263,6 +306,12 @@ export default function AdminVehiclesPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleModalSuccess}
         vehicle={selectedVehicle}
+      />
+      
+      <VehicleDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        vehicle={viewingVehicle}
       />
     </div>
   );

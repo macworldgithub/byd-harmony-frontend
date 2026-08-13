@@ -1,3 +1,5 @@
+"use client";
+
 import { Search, ChevronDown, Plus } from "lucide-react";
 
 export function Toolbar({
