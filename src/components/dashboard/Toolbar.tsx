@@ -4,10 +4,12 @@ export function Toolbar({
   searchPlaceholder,
   filterLabel,
   ctaLabel,
+  onCtaClick,
 }: {
   searchPlaceholder: string;
   filterLabel?: string;
   ctaLabel?: string;
+  onCtaClick?: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -20,13 +22,20 @@ export function Toolbar({
         />
       </div>
       {filterLabel && (
-        <button className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50">
+        <button
+          type="button"
+          className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+        >
           {filterLabel}
           <ChevronDown className="h-4 w-4 text-neutral-400" />
         </button>
       )}
       {ctaLabel && (
-        <button className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">
+        <button
+          type="button"
+          onClick={onCtaClick}
+          className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+        >
           <Plus className="h-4 w-4" />
           {ctaLabel}
         </button>
