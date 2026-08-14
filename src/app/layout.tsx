@@ -6,10 +6,15 @@ export const metadata: Metadata = {
   description: "Good Showroom dealer management system — workstation preview.",
 };
 
+import { Toaster } from "react-hot-toast";
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900">{children}</body>
+      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900">
+        {children}
+        <Toaster position="top-center" />
+      </body>
     </html>
   );
 }
