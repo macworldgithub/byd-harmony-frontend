@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
@@ -71,7 +71,7 @@ function getInitialLocationId(searchParams: ReturnType<typeof useSearchParams>):
 
 /* ─────────────────────────────────────────────────────────── */
 
-export default function SiteJobCardsPage() {
+function SiteJobCardsPageInner() {
   const searchParams = useSearchParams();
 
   const [locationId] = useState<string>(() => getInitialLocationId(searchParams));
@@ -543,5 +543,13 @@ export default function SiteJobCardsPage() {
         onJobCardUpdated={() => fetchJobCards(page)}
       />
     </div>
+  );
+}
+
+export default function SiteJobCardsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SiteJobCardsPageInner />
+    </Suspense>
   );
 }

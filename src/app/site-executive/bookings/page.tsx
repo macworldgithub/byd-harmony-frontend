@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
@@ -70,7 +70,7 @@ function getInitialLocationId(searchParams: ReturnType<typeof useSearchParams>):
 
 /* ─────────────────────────────────────────────────────────── */
 
-export default function SiteBookingsPage() {
+function SiteBookingsPageInner() {
   const searchParams = useSearchParams();
 
   const [locationId] = useState<string>(() => getInitialLocationId(searchParams));
@@ -505,5 +505,13 @@ export default function SiteBookingsPage() {
         locationId={locationId}
       />
     </div>
+  );
+}
+
+export default function SiteBookingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SiteBookingsPageInner />
+    </Suspense>
   );
 }
