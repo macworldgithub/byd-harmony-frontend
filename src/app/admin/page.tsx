@@ -89,12 +89,12 @@ export default function AdminOverviewPage() {
   };
 
   const stats = data ? [
-    { label: "Total Customers", value: String(data.totalCustomers ?? 0), icon: Users, accent: "red" as const },
-    { label: "Active Vehicles", value: String(data.activeVehicles ?? 0), icon: Car, accent: "orange" as const },
-    { label: "Open Jobs", value: String(data.openJobs ?? 0), icon: ClipboardList, accent: "green" as const },
-    { label: "Total Locations", value: String(data.totalLocations ?? 0), icon: MapPin, accent: "purple" as const },
-    { label: "Bookings Today", value: String(data.bookingsToday ?? 0), icon: CalendarDays, accent: "blue" as const },
-    { label: "Pending Bookings", value: String(data.pendingBookings ?? 0), icon: Clock, accent: "purple" as const }
+    { label: "Total Customers", value: String(data.totalCustomers ?? 0), icon: Users, accent: "red" as const, helper: "Live data" },
+    { label: "Active Vehicles", value: String(data.activeVehicles ?? 0), icon: Car, accent: "orange" as const, helper: "Live data" },
+    { label: "Open Jobs", value: String(data.openJobs ?? 0), icon: ClipboardList, accent: "green" as const, helper: "Live data" },
+    { label: "Total Locations", value: String(data.totalLocations ?? 0), icon: MapPin, accent: "purple" as const, helper: "Live data" },
+    { label: "Bookings Today", value: String(data.bookingsToday ?? 0), icon: CalendarDays, accent: "blue" as const, helper: "Live data" },
+    { label: "Pending Bookings", value: String(data.pendingBookings ?? 0), icon: Clock, accent: "purple" as const, helper: "Live data" }
   ] : [];
 
   if (isLoading) {
@@ -167,7 +167,7 @@ export default function AdminOverviewPage() {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <Badge tone={activity.status ? (statusTone[activity.status] || "neutral") : "neutral"} size="sm">
+                    <Badge tone={activity.status ? (statusTone[activity.status] || "neutral") : "neutral"}>
                       {activity.status ? (activity.status.replace("_", " ")) : "unknown"}
                     </Badge>
                     <span className="text-[10px] text-neutral-400 font-medium">

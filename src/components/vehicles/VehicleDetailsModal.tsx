@@ -76,7 +76,7 @@ export function VehicleDetailsModal({ isOpen, onClose, vehicle }: VehicleDetails
               VIN: <span className="text-neutral-700">{vehicle.vin}</span>
             </p>
           </div>
-          <Badge tone={vehicle.status ? (statusTone[vehicle.status as VehicleStatus] || "neutral") : "neutral"} size="lg">
+          <Badge tone={vehicle.status ? (statusTone[vehicle.status as VehicleStatus] || "neutral") : "neutral"}>
             {vehicle.status ? (statusLabel[vehicle.status as VehicleStatus] || vehicle.status) : "Unknown"}
           </Badge>
         </div>
