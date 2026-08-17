@@ -52,14 +52,14 @@ export interface CustomerDetail {
 }
 
 /** Safely extract the location ID string regardless of populated shape */
-export function getLocationId(loc: CustomerDetail["preferredLocationId"]): string {
+export function getLocationId(loc?: CustomerDetail["preferredLocationId"]): string {
   if (!loc) return "";
   if (typeof loc === "object") return loc._id;
   return loc;
 }
 
 /** Safely extract the location display name */
-export function getLocationName(loc: CustomerDetail["preferredLocationId"]): string {
+export function getLocationName(loc?: CustomerDetail["preferredLocationId"]): string {
   if (!loc) return "";
   if (typeof loc === "object") return loc.name;
   return loc; // fallback: show raw ID

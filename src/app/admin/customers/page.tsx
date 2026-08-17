@@ -458,6 +458,7 @@ export default function AdminCustomersPage() {
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSuccess={handleCreated}
+        isAdmin={true}
       />
 
       <CustomerDetailModal
@@ -483,6 +484,7 @@ export default function AdminCustomersPage() {
           setIsEditOpen(false);
           setEditCustomer(null);
         }}
+        isAdmin={true}
       />
     </div>
   );

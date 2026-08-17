@@ -69,6 +69,7 @@ interface AddCustomerModalProps {
   onClose: () => void;
   onSuccess?: (created: unknown) => void;
   defaultLocationId?: string;
+  isAdmin?: boolean;
 }
 
 function getAuthHeaders(): HeadersInit {
@@ -78,7 +79,13 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
-export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId }: AddCustomerModalProps) {
+export function AddCustomerModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  defaultLocationId,
+  isAdmin = false,
+}: AddCustomerModalProps) {
   const [values, setValues] = useState<CustomerFormValues>(INITIAL_VALUES);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +97,8 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
     if (!isOpen) return;
 
     let locId = defaultLocationId || "";
-    if (!locId && typeof window !== "undefined") {
+    // Only non-admin workstations should fallback to localStorage selectedSiteId
+    if (!isAdmin && !locId && typeof window !== "undefined") {
       locId = localStorage.getItem("selectedSiteId") || "";
       if (!locId) {
         const savedLocStr = localStorage.getItem("selectedLocation");
@@ -110,7 +118,42 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
     setError(null);
     setIsLoading(false);
     setTimeout(() => firstNameRef.current?.focus(), 80);
-  }, [isOpen, defaultLocationId]);
+  }, [isOpen, defaultLocationId, isAdmin]);
+
+  // Fetch locations list if admin workstation
+  useEffect(() => {
+    if (!isOpen || !isAdmin) return;
+
+    let isMounted = true;
+    const fetchLocations = async () => {
+      setLocationsLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/locations`, {
+          headers: getAuthHeaders(),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (isMounted) {
+          if (res.ok && Array.isArray(data?.data)) {
+            setLocations(data.data);
+          } else if (res.ok && Array.isArray(data)) {
+            setLocations(data);
+          } else {
+            setLocations([]);
+          }
+        }
+      } catch {
+        if (isMounted) setLocations([]);
+      } finally {
+        if (isMounted) setLocationsLoading(false);
+      }
+    };
+
+    fetchLocations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, isAdmin]);
 
   const update = <K extends keyof CustomerFormValues>(key: K, value: CustomerFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -126,13 +169,17 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
       setError("Please provide at least an email or phone number.");
       return;
     }
+    if (isAdmin && !values.preferredLocationId.trim()) {
+      setError("Please select a location.");
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
       let locId = values.preferredLocationId.trim() || defaultLocationId || undefined;
-      if (!locId && typeof window !== "undefined") {
+      if (!isAdmin && !locId && typeof window !== "undefined") {
         locId = localStorage.getItem("selectedSiteId") || undefined;
       }
 
@@ -323,6 +370,31 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
             />
           </Field>
         </div>
+
+        {isAdmin && (
+          <Field label="Assigned Location / Site" required>
+            <select
+              value={values.preferredLocationId}
+              onChange={(e) => update("preferredLocationId", e.target.value)}
+              disabled={isLoading || locationsLoading}
+              className={inputClass}
+              required
+            >
+              <option value="">
+                {locationsLoading ? "Loading locations..." : "Select location"}
+              </option>
+              {locations.map((loc) => {
+                const id = loc._id || (loc as any).id;
+                const label = loc.name + (loc.suburb ? ` (${loc.suburb})` : "");
+                return (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          </Field>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Lifecycle stage">

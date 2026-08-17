@@ -45,6 +45,7 @@ export interface EditCustomerModalProps {
   customer: CustomerDetail | null;
   onSuccess?: (updated: CustomerDetail) => void;
   defaultLocationId?: string;
+  isAdmin?: boolean;
 }
 
 export function EditCustomerModal({
@@ -53,6 +54,7 @@ export function EditCustomerModal({
   customer,
   onSuccess,
   defaultLocationId,
+  isAdmin = false,
 }: EditCustomerModalProps) {
   const [values, setValues] = useState<Partial<CustomerDetail>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +63,7 @@ export function EditCustomerModal({
   const [locationsLoading, setLocationsLoading] = useState(false);
   const firstNameRef = useRef<HTMLInputElement>(null);
 
-  /* Populate form + load locations — merged to avoid race condition */
+  /* Populate form + load locations */
   useEffect(() => {
     if (!isOpen || !customer) {
       if (!isOpen) {
@@ -71,38 +73,47 @@ export function EditCustomerModal({
       return;
     }
 
-    // Set values synchronously so the select value is in state before
-    // locations arrive. Extract the ID string from the populated object
-    // (API returns preferredLocationId as { _id, name } not a plain string).
     setValues({
       ...customer,
-      preferredLocationId: getLocationId(customer.preferredLocationId),
+      preferredLocationId:
+        getLocationId(customer.preferredLocationId) || defaultLocationId || "",
     } as typeof customer);
     setError(null);
     setIsLoading(false);
     setTimeout(() => firstNameRef.current?.focus(), 80);
 
-    // Load locations async — when they arrive the matching option will render
-    const loadLocations = async () => {
-      setLocationsLoading(true);
-      try {
-        const res = await fetch(`${API_URL}/locations`, {
-          headers: getAuthHeaders(),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && Array.isArray(data?.data)) {
-          setLocations(data.data);
-        } else {
-          setLocations([]);
+    // Load locations only for admin
+    if (isAdmin) {
+      let isMounted = true;
+      const loadLocations = async () => {
+        setLocationsLoading(true);
+        try {
+          const res = await fetch(`${API_URL}/locations`, {
+            headers: getAuthHeaders(),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (isMounted) {
+            if (res.ok && Array.isArray(data?.data)) {
+              setLocations(data.data);
+            } else if (res.ok && Array.isArray(data)) {
+              setLocations(data);
+            } else {
+              setLocations([]);
+            }
+          }
+        } catch {
+          if (isMounted) setLocations([]);
+        } finally {
+          if (isMounted) setLocationsLoading(false);
         }
-      } catch {
-        setLocations([]);
-      } finally {
-        setLocationsLoading(false);
-      }
-    };
-    loadLocations();
-  }, [isOpen, customer]);
+      };
+      loadLocations();
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [isOpen, customer, defaultLocationId, isAdmin]);
 
   const update = <K extends keyof CustomerDetail>(
     key: K,
@@ -118,12 +129,22 @@ export function EditCustomerModal({
       setError("First name and last name are required.");
       return;
     }
+    if (!values.email?.trim() && !values.phone?.trim()) {
+      setError("Please provide at least an email or phone number.");
+      return;
+    }
+    const selectedLocationId = getLocationId(values.preferredLocationId);
+
+    if (isAdmin && !selectedLocationId.trim()) {
+      setError("Please select a location.");
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const locId = values.preferredLocationId || defaultLocationId || undefined;
+      const locId = selectedLocationId || defaultLocationId || undefined;
       const body = {
         firstName: values.firstName?.trim(),
         lastName: values.lastName?.trim(),
@@ -311,6 +332,31 @@ export function EditCustomerModal({
             />
           </Field>
         </div>
+
+        {isAdmin && (
+          <Field label="Assigned Location / Site" required>
+            <select
+              value={getLocationId(values.preferredLocationId) || ""}
+              onChange={(e) => update("preferredLocationId", e.target.value)}
+              disabled={isLoading || locationsLoading}
+              className={inputClass}
+              required
+            >
+              <option value="">
+                {locationsLoading ? "Loading locations..." : "Select location"}
+              </option>
+              {locations.map((loc) => {
+                const id = loc._id || (loc as any).id;
+                const label = loc.name + (loc.suburb ? ` (${loc.suburb})` : "");
+                return (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          </Field>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Lifecycle stage">
