@@ -68,9 +68,10 @@ interface JobCardModalProps {
   onClose: () => void;
   onSuccess: () => void;
   jobCard?: any | null; // Full job card object if editing
+  locationId?: string;  // Pre-supplied by Site Executive — hides location selector
 }
 
-export function JobCardModal({ isOpen, onClose, onSuccess, jobCard }: JobCardModalProps) {
+export function JobCardModal({ isOpen, onClose, onSuccess, jobCard, locationId: forcedLocationId }: JobCardModalProps) {
   const isEdit = !!jobCard;
   const [values, setValues] = useState<JobCardFormValues>(INITIAL_VALUES);
   const [isLoading, setIsLoading] = useState(false);
@@ -162,9 +163,9 @@ export function JobCardModal({ isOpen, onClose, onSuccess, jobCard }: JobCardMod
         payload = {
           customerId: values.customerId,
           vehicleId: values.vehicleId,
-          locationId: values.locationId,
-          bookingId: values.bookingId,
-          technicianId: values.technicianId,
+          locationId: forcedLocationId || values.locationId || undefined,
+          bookingId: values.bookingId || undefined,
+          technicianId: values.technicianId || undefined,
           priority: values.priority,
           serviceType: values.serviceType,
           workRequired: values.workRequired,
@@ -265,21 +266,23 @@ export function JobCardModal({ isOpen, onClose, onSuccess, jobCard }: JobCardMod
                 </select>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Location (Optional)
-                </label>
-                <LocationSearchSelect
-                  locations={locations}
-                  value={values.locationId}
-                  onChange={(val) => update("locationId", val)}
-                  disabled={isFetchingRelations}
-                  loading={isFetchingRelations}
-                  placeholder="Select a location"
-                  emptyLabel="Select a location"
-                  allowClear
-                />
-              </div>
+              {!forcedLocationId && (
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Location (Optional)
+                  </label>
+                  <LocationSearchSelect
+                    locations={locations}
+                    value={values.locationId}
+                    onChange={(val) => update("locationId", val)}
+                    disabled={isFetchingRelations}
+                    loading={isFetchingRelations}
+                    placeholder="Select a location"
+                    emptyLabel="Select a location"
+                    allowClear
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
