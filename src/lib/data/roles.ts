@@ -290,7 +290,7 @@ export const roles: Record<string, RoleConfig> = {
       {
         title: "Deliveries",
         links: [
-          { label: "Delivery Queue", href: "/delivery", icon: Truck },
+          { label: "Delivery Queue", href: "/delivery", icon: Calendar },
           // {
           //   label: "Delivery Calendar",
           //   href: "/delivery/calendar",
