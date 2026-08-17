@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
 import { Badge } from "@/components/ui/Badge";
@@ -79,8 +80,101 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+function getSelectedSiteId(searchParams?: ReturnType<typeof useSearchParams> | null): string {
+  if (typeof window === "undefined") return "";
+
+  // 1. Direct key 'selectedSiteId' in localStorage
+  const siteId = localStorage.getItem("selectedSiteId");
+  if (siteId && siteId !== "undefined" && siteId !== "null" && siteId.trim() !== "") {
+    return siteId.trim();
+  }
+
+  // 2. Direct key in sessionStorage
+  const sessionSiteId = sessionStorage.getItem("selectedSiteId");
+  if (sessionSiteId && sessionSiteId !== "undefined" && sessionSiteId !== "null" && sessionSiteId.trim() !== "") {
+    return sessionSiteId.trim();
+  }
+
+  // 3. Search parameters '?site=' or '?locationId=' or '?selectedSiteId='
+  const urlParamSite =
+    searchParams?.get("site") ||
+    searchParams?.get("locationId") ||
+    searchParams?.get("selectedSiteId");
+  if (urlParamSite && urlParamSite.trim() !== "") {
+    return urlParamSite.trim();
+  }
+
+  if (typeof window !== "undefined" && window.location) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlSite =
+        params.get("site") ||
+        params.get("locationId") ||
+        params.get("selectedSiteId");
+      if (urlSite && urlSite.trim() !== "") return urlSite.trim();
+    } catch {
+      // ignore
+    }
+  }
+
+  // 4. Fallback from 'selectedLocation' JSON
+  const savedLocStr = localStorage.getItem("selectedLocation");
+  if (savedLocStr) {
+    try {
+      const parsed = JSON.parse(savedLocStr);
+      const parsedId = parsed._id || parsed.id;
+      if (parsedId && typeof parsedId === "string" && parsedId.trim() !== "") {
+        return parsedId.trim();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return "";
+}
+
+function getInitialSiteName(): string {
+  if (typeof window === "undefined") return "";
+  let name = localStorage.getItem("selectedSite") || "";
+  if (!name) {
+    const savedLocStr = localStorage.getItem("selectedLocation");
+    if (savedLocStr) {
+      try {
+        const parsed = JSON.parse(savedLocStr);
+        name = parsed.name || "";
+      } catch {
+        // ignore
+      }
+    }
+  }
+  return name;
+}
+
 /* ─── Page ───────────────────────────────────────────────────── */
 export default function ServiceCustomersPage() {
+  const searchParams = useSearchParams();
+  const [locationId, setLocationId] = useState<string>("");
+  const [siteName, setSiteName] = useState<string>("");
+
+  /* Sync location ID from storage/URL */
+  useEffect(() => {
+    const activeId = getSelectedSiteId(searchParams);
+    const activeName = getInitialSiteName();
+    setLocationId(activeId);
+    setSiteName(activeName);
+
+    const onStorage = () => {
+      const updatedId = getSelectedSiteId(searchParams);
+      const updatedName = getInitialSiteName();
+      setLocationId(updatedId);
+      setSiteName(updatedName);
+    };
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [searchParams]);
+
   const [customers, setCustomers] = useState<CustomerDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
@@ -102,12 +196,17 @@ export default function ServiceCustomersPage() {
   const [editCustomer, setEditCustomer] = useState<CustomerDetail | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  /* ── Fetch all customers ──────────────────────────────────── */
+  /* ── Fetch customers ──────────────────────────────────────── */
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setListError(null);
     try {
-      const res = await fetch(`${API_URL}/customers`, {
+      const activeSiteId = getSelectedSiteId(searchParams) || locationId;
+      let url = `${API_URL}/customers`;
+      if (activeSiteId) {
+        url += `?locationId=${encodeURIComponent(activeSiteId)}`;
+      }
+      const res = await fetch(url, {
         headers: getAuthHeaders(),
       });
       const data = await res.json().catch(() => ({}));
@@ -121,7 +220,7 @@ export default function ServiceCustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchParams, locationId]);
 
   useEffect(() => {
     fetchCustomers();
@@ -141,10 +240,12 @@ export default function ServiceCustomersPage() {
       setIsSearching(true);
       setListError(null);
       try {
-        const res = await fetch(
-          `${API_URL}/customers/search?q=${encodeURIComponent(q.trim())}`,
-          { headers: getAuthHeaders() }
-        );
+        const activeSiteId = getSelectedSiteId(searchParams) || locationId;
+        let url = `${API_URL}/customers/search?q=${encodeURIComponent(q.trim())}`;
+        if (activeSiteId) {
+          url += `&locationId=${encodeURIComponent(activeSiteId)}`;
+        }
+        const res = await fetch(url, { headers: getAuthHeaders() });
         const data = await res.json().catch(() => ({}));
         if (res.ok && Array.isArray(data?.data)) {
           setCustomers(data.data);
@@ -444,6 +545,7 @@ export default function ServiceCustomersPage() {
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSuccess={handleCreated}
+        defaultLocationId={locationId}
       />
 
       <CustomerDetailModal
@@ -464,6 +566,7 @@ export default function ServiceCustomersPage() {
           setEditCustomer(null);
         }}
         customer={editCustomer}
+        defaultLocationId={locationId}
         onSuccess={(updated) => {
           handleUpdated(updated);
           setIsEditOpen(false);
