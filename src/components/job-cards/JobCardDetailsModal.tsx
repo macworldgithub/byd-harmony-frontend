@@ -203,10 +203,10 @@ export function JobCardDetailsModal({ isOpen, onClose, jobCardId, onJobCardUpdat
               </h3>
             </div>
             <div className="flex items-center gap-2">
-              <Badge tone={jobCard.status ? (statusTone[jobCard.status] || "neutral") : "neutral"} size="lg">
+              <Badge tone={jobCard.status ? (statusTone[jobCard.status] || "neutral") : "neutral"}>
                 {jobCard.status ? (statusLabel[jobCard.status] || jobCard.status) : "Unknown"}
               </Badge>
-              <Badge tone={jobCard.priority === "high" || jobCard.priority === "urgent" ? "red" : "neutral"} size="lg">
+              <Badge tone={jobCard.priority === "high" || jobCard.priority === "urgent" ? "red" : "neutral"}>
                 {jobCard.priority ? (jobCard.priority.toUpperCase()) : "NORMAL"}
               </Badge>
             </div>

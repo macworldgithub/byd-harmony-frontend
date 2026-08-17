@@ -5,8 +5,9 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { Toolbar } from "@/components/dashboard/Toolbar";
-import { Wrench, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Wrench, Pencil, Trash2, Loader2, Eye } from "lucide-react";
 import { JobCardModal, JobCardStatus } from "@/components/job-cards/JobCardModal";
+import { JobCardDetailsModal } from "@/components/job-cards/JobCardDetailsModal";
 import { API_URL } from "@/lib/config";
 
 const statusTone: Record<string, "blue" | "orange" | "neutral" | "green"> = {
@@ -30,6 +31,9 @@ export default function AdminJobCardsPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJobCard, setSelectedJobCard] = useState<any | null>(null);
+
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedDetailJobCardId, setSelectedDetailJobCardId] = useState<string | null>(null);
 
   const fetchJobCards = async () => {
     setIsLoading(true);
@@ -91,6 +95,12 @@ export default function AdminJobCardsPage() {
     e?.stopPropagation();
     setSelectedJobCard(job);
     setIsModalOpen(true);
+  };
+
+  const handleOpenDetailModal = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedDetailJobCardId(id);
+    setIsDetailModalOpen(true);
   };
 
   const handleModalSuccess = () => {
@@ -172,7 +182,11 @@ export default function AdminJobCardsPage() {
                     jobCards.map((job) => {
                       const id = job._id || job.id;
                       return (
-                        <tr key={id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
+                        <tr 
+                          key={id} 
+                          onClick={(e) => handleOpenDetailModal(id, e)}
+                          className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 cursor-pointer transition-colors"
+                        >
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2">
                               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50">
@@ -193,8 +207,15 @@ export default function AdminJobCardsPage() {
                               {job.status ? (statusLabel[job.status] || job.status) : "Unknown"}
                             </Badge>
                           </td>
-                          <td className="px-5 py-3.5">
+                          <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => handleOpenDetailModal(id, e)}
+                                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
+                                title="View Details & Line Items"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
                               <button
                                 onClick={(e) => handleOpenEditModal(job, e)}
                                 className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
@@ -230,6 +251,13 @@ export default function AdminJobCardsPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleModalSuccess}
         jobCard={selectedJobCard}
+      />
+
+      <JobCardDetailsModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        jobCardId={selectedDetailJobCardId}
+        onJobCardUpdated={fetchJobCards}
       />
     </div>
   );

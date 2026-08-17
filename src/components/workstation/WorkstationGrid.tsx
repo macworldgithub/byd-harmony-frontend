@@ -1,14 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { workstations } from "@/lib/data/workstations";
 import { WorkstationCard } from "./WorkstationCard";
 import { LoginModal } from "@/components/login/LoginModal";
-import { MapPin, ChevronRight } from "lucide-react";
+import { MapPin, ChevronRight, Loader2 } from "lucide-react";
 import type { Workstation } from "@/lib/types";
+import { API_URL } from "@/lib/config";
 
-const sites = [
+interface SiteItem {
+  id: string;
+  _id?: string;
+  name: string;
+  detail: string;
+  raw?: any;
+}
+
+const defaultSites: SiteItem[] = [
   {
     id: "s-1",
     name: "BYD Caroline Springs",
@@ -24,6 +33,45 @@ export function WorkstationGrid() {
   const [selectedRole, setSelectedRole] = useState<Workstation | null>(null);
   const [loginTarget, setLoginTarget] = useState<Workstation | null>(null);
 
+  const [locations, setLocations] = useState<SiteItem[]>(defaultSites);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+
+  useEffect(() => {
+    if (selectedRole) {
+      fetchLocations();
+    }
+  }, [selectedRole]);
+
+  const fetchLocations = async () => {
+    setIsLoadingLocations(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_URL}/locations`, { headers });
+      const data = await res.json();
+
+      if (res.ok && data) {
+        const rawList = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+        if (rawList.length > 0) {
+          const mapped: SiteItem[] = rawList.map((loc: any) => ({
+            id: loc._id || loc.id,
+            _id: loc._id || loc.id,
+            name: loc.name,
+            detail: [loc.type, loc.suburb || loc.address].filter(Boolean).join(" · ") || "Location",
+            raw: loc,
+          }));
+          setLocations(mapped);
+        }
+      }
+    } catch {
+      // Fall back to defaultSites if network error
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
+
   const handleCardClick = (workstation: Workstation) => {
     if (workstation.slug === "super-admin") {
       // Open login modal for Super Admin
@@ -36,9 +84,16 @@ export function WorkstationGrid() {
     }
   };
 
-  const handleSiteSelect = (siteId: string) => {
+  const handleSiteSelect = (site: SiteItem) => {
+    if (typeof window !== "undefined") {
+      const siteData = site.raw || { id: site.id, name: site.name, detail: site.detail };
+      localStorage.setItem("selectedLocation", JSON.stringify(siteData));
+      localStorage.setItem("selectedSiteId", site._id || site.id);
+      localStorage.setItem("selectedSite", site.name);
+    }
+
     if (selectedRole) {
-      router.push(`${selectedRole.href}?site=${siteId}`);
+      router.push(`${selectedRole.href}?site=${site._id || site.id}`);
     }
   };
 
@@ -91,28 +146,35 @@ export function WorkstationGrid() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              {sites.map((site) => (
-                <button
-                  key={site.id}
-                  onClick={() => handleSiteSelect(site.id)}
-                  className="flex w-full items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 text-left transition-all hover:border-rose-300 hover:bg-rose-50 hover:shadow-sm"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100">
-                      <MapPin className="h-5 w-5 text-neutral-400" />
+            {isLoadingLocations ? (
+              <div className="flex h-40 flex-col items-center justify-center gap-2 text-neutral-400">
+                <Loader2 className="h-6 w-6 animate-spin text-rose-600" />
+                <p className="text-sm">Loading locations...</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                {locations.map((site) => (
+                  <button
+                    key={site.id}
+                    onClick={() => handleSiteSelect(site)}
+                    className="flex w-full items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 text-left transition-all hover:border-rose-300 hover:bg-rose-50 hover:shadow-sm"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100">
+                        <MapPin className="h-5 w-5 text-neutral-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-neutral-900">
+                          {site.name}
+                        </p>
+                        <p className="text-xs text-neutral-500">{site.detail}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-neutral-900">
-                        {site.name}
-                      </p>
-                      <p className="text-xs text-neutral-500">{site.detail}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-neutral-300" />
-                </button>
-              ))}
-            </div>
+                    <ChevronRight className="h-4 w-4 text-neutral-300" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="mt-6 flex justify-center">
               <button
