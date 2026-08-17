@@ -161,6 +161,7 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
         notes: values.notes.trim() || undefined,
       };
 
+ 
       const res = await fetch(`${API_URL}/customers`, {
         method: "POST",
         headers: getAuthHeaders(),
