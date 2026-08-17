@@ -101,7 +101,7 @@ export function CustomerDetailModal({
   onEdit,
 }: CustomerDetailModalProps) {
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);;
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);

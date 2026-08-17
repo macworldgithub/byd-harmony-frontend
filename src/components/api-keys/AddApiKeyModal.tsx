@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { LocationSearchSelect } from "@/components/ui/LocationSearchSelect";
 import { KeyRound, Loader2, Copy, Check } from "lucide-react";
 import { API_URL } from "@/lib/config";
 
@@ -303,21 +304,16 @@ export function AddApiKeyModal({ isOpen, onClose, onSuccess }: AddApiKeyModalPro
         </div>
 
         <Field label="Location Restriction">
-          <select
+          <LocationSearchSelect
+            locations={locations}
             value={values.locationId}
-            onChange={(e) => update("locationId", e.target.value)}
+            onChange={(val) => update("locationId", val)}
             disabled={isLoading || locationsLoading}
-            className={inputClass}
-          >
-            <option value="">
-              {locationsLoading ? "Loading locations..." : "No location restriction"}
-            </option>
-            {locations.map((loc) => (
-              <option key={loc._id} value={loc._id}>
-                {loc.name}
-              </option>
-            ))}
-          </select>
+            loading={locationsLoading}
+            placeholder="No location restriction"
+            emptyLabel="No location restriction"
+            allowClear
+          />
         </Field>
 
         <div>

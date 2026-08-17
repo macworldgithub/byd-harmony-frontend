@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { LocationSearchSelect } from "@/components/ui/LocationSearchSelect";
 import { Pencil, Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/config";
 import type { CustomerDetail } from "./CustomerDetailModal";
@@ -335,26 +336,15 @@ export function EditCustomerModal({
 
         {isAdmin && (
           <Field label="Assigned Location / Site" required>
-            <select
+            <LocationSearchSelect
+              locations={locations}
               value={getLocationId(values.preferredLocationId) || ""}
-              onChange={(e) => update("preferredLocationId", e.target.value)}
+              onChange={(val) => update("preferredLocationId", val)}
               disabled={isLoading || locationsLoading}
-              className={inputClass}
+              loading={locationsLoading}
+              placeholder="Select location"
               required
-            >
-              <option value="">
-                {locationsLoading ? "Loading locations..." : "Select location"}
-              </option>
-              {locations.map((loc) => {
-                const id = loc._id || (loc as any).id;
-                const label = loc.name + (loc.suburb ? ` (${loc.suburb})` : "");
-                return (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
+            />
           </Field>
         )}
 

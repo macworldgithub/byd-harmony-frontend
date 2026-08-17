@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { LocationSearchSelect } from "@/components/ui/LocationSearchSelect";
 import { ClipboardList, DollarSign, Calendar, Plus, X } from "lucide-react";
 
 const jobCards = [
@@ -51,6 +52,7 @@ const jobCards = [
 
 export default function OperationsJobCardsPage() {
   const [showNewJobCardModal, setShowNewJobCardModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState("");
 
   return (
     <div>
@@ -118,12 +120,16 @@ export default function OperationsJobCardsPage() {
                 <label className="mb-2 block text-sm font-medium text-neutral-800">
                   Location
                 </label>
-                <select className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100">
-                  <option>Select location</option>
-                  <option>BYD Caroline Springs</option>
-                  <option>BYD Nunawading</option>
-                  <option>Denza Melbourne</option>
-                </select>
+                <LocationSearchSelect
+                  locations={[
+                    { id: "1", name: "BYD Caroline Springs", suburb: "Caroline Springs" },
+                    { id: "2", name: "BYD Nunawading", suburb: "Nunawading" },
+                    { id: "3", name: "Denza Melbourne", suburb: "Melbourne" },
+                  ]}
+                  value={selectedLocation}
+                  onChange={setSelectedLocation}
+                  placeholder="Select location"
+                />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">

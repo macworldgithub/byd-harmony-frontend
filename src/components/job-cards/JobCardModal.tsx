@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { LocationSearchSelect } from "@/components/ui/LocationSearchSelect";
 import { Wrench, Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/config";
 import toast from "react-hot-toast";
@@ -268,23 +269,16 @@ export function JobCardModal({ isOpen, onClose, onSuccess, jobCard }: JobCardMod
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
                   Location (Optional)
                 </label>
-                <select
+                <LocationSearchSelect
+                  locations={locations}
                   value={values.locationId}
-                  onChange={(e) => update("locationId", e.target.value)}
+                  onChange={(val) => update("locationId", val)}
                   disabled={isFetchingRelations}
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-900 focus:border-violet-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-violet-500/10"
-                >
-                  <option value="">Select a location</option>
-                  {locations.map((loc: any) => {
-                    const id = loc._id || loc.id;
-                    const label = loc.name || loc.address || loc.city || id;
-                    return (
-                      <option key={id} value={id}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
+                  loading={isFetchingRelations}
+                  placeholder="Select a location"
+                  emptyLabel="Select a location"
+                  allowClear
+                />
               </div>
 
               <div>
