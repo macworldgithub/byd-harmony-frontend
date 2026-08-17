@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
@@ -151,8 +151,8 @@ function getInitialSiteName(): string {
   return name;
 }
 
-/* ─── Page ───────────────────────────────────────────────────── */
-export default function ServiceCustomersPage() {
+/* ─── Inner Page (needs Suspense for useSearchParams) ───────── */
+function ServiceCustomersPageInner() {
   const searchParams = useSearchParams();
   const [locationId, setLocationId] = useState<string>("");
   const [siteName, setSiteName] = useState<string>("");
@@ -574,5 +574,14 @@ export default function ServiceCustomersPage() {
         }}
       />
     </div>
+  );
+}
+
+/* ─── Page ───────────────────────────────────────────────────── */
+export default function ServiceCustomersPage() {
+  return (
+    <Suspense fallback={null}>
+      <ServiceCustomersPageInner />
+    </Suspense>
   );
 }
