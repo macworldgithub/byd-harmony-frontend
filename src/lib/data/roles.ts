@@ -43,8 +43,16 @@ export const roles: Record<string, RoleConfig> = {
         links: [
           { label: "Dashboard", href: "/operations", icon: LayoutGrid },
           { label: "Customers", href: "/operations/customers", icon: Users },
-          { label: "Service Bookings", href: "/operations/bookings", icon: Calendar },
-          { label: "Job Cards", href: "/operations/job-cards", icon: ClipboardList },
+          {
+            label: "Service Bookings",
+            href: "/operations/bookings",
+            icon: Calendar,
+          },
+          {
+            label: "Job Cards",
+            href: "/operations/job-cards",
+            icon: ClipboardList,
+          },
           { label: "Documents", href: "/operations/documents", icon: FileText },
           { label: "Locations", href: "/operations/locations", icon: MapPin },
         ],
@@ -52,7 +60,11 @@ export const roles: Record<string, RoleConfig> = {
       {
         title: "System",
         links: [
-          { label: "Executive", href: "/operations/executive", icon: TrendingUp },
+          {
+            label: "Executive",
+            href: "/operations/executive",
+            icon: TrendingUp,
+          },
           { label: "Live Comms", href: "/operations/live-comms", icon: Radio },
           { label: "API Keys", href: "/operations/api-keys", icon: KeyRound },
           { label: "API Docs", href: "/operations/api-docs", icon: BookOpen },
@@ -83,7 +95,11 @@ export const roles: Record<string, RoleConfig> = {
         links: [
           { label: "All Customers", href: "/admin/customers", icon: Users },
           { label: "All Vehicles", href: "/admin/vehicles", icon: Car },
-          { label: "All Job Cards", href: "/admin/job-cards", icon: ClipboardList },
+          {
+            label: "All Job Cards",
+            href: "/admin/job-cards",
+            icon: ClipboardList,
+          },
           { label: "Documents", href: "/admin/documents", icon: FileText },
         ],
       },
@@ -104,21 +120,34 @@ export const roles: Record<string, RoleConfig> = {
     roleLabel: "Executive",
     roleIcon: TrendingUp,
     accent: "green",
-    contextLine: "Cross-site performance · All departments · Live data · Monday 10 August 2026",
+    contextLine:
+      "Cross-site performance · All departments · Live data · Monday 10 August 2026",
     sections: [
       {
         title: "Intelligence",
         links: [
           { label: "BI Dashboard", href: "/executive", icon: BarChart3 },
-          { label: "Custom Screen", href: "/executive/custom-screen", icon: Layers },
-          { label: "Site Comparison", href: "/executive/site-comparison", icon: Building2 },
+          {
+            label: "Custom Screen",
+            href: "/executive/custom-screen",
+            icon: Layers,
+          },
+          {
+            label: "Site Comparison",
+            href: "/executive/site-comparison",
+            icon: Building2,
+          },
         ],
       },
       {
         title: "Operations",
         links: [
           { label: "Customers", href: "/executive/customers", icon: Users },
-          { label: "Job Cards", href: "/executive/job-cards", icon: ClipboardList },
+          {
+            label: "Job Cards",
+            href: "/executive/job-cards",
+            icon: ClipboardList,
+          },
           { label: "Bookings", href: "/executive/bookings", icon: Calendar },
         ],
       },
@@ -126,7 +155,11 @@ export const roles: Record<string, RoleConfig> = {
         title: "Reports",
         links: [
           { label: "Revenue", href: "/executive/revenue", icon: TrendingUp },
-          { label: "Activity Feed", href: "/executive/activity-feed", icon: Radio },
+          {
+            label: "Activity Feed",
+            href: "/executive/activity-feed",
+            icon: Radio,
+          },
         ],
       },
     ],
@@ -144,24 +177,52 @@ export const roles: Record<string, RoleConfig> = {
         title: "Site Dashboard",
         links: [
           { label: "Dashboard", href: "/site-executive", icon: LayoutGrid },
-          { label: "Reports", href: "/site-executive/reports", icon: BarChart3 },
-          { label: "Live Activity", href: "/site-executive/live-activity", icon: Radio },
+          {
+            label: "Reports",
+            href: "/site-executive/reports",
+            icon: BarChart3,
+          },
+          {
+            label: "Live Activity",
+            href: "/site-executive/live-activity",
+            icon: Radio,
+          },
         ],
       },
       {
         title: "Operations",
         links: [
-          { label: "Customers", href: "/site-executive/customers", icon: Users },
-          { label: "Bookings", href: "/site-executive/bookings", icon: Calendar },
-          { label: "Job Cards", href: "/site-executive/job-cards", icon: ClipboardList },
-          { label: "Inventory", href: "/site-executive/inventory", icon: Package },
+          {
+            label: "Customers",
+            href: "/site-executive/customers",
+            icon: Users,
+          },
+          {
+            label: "Bookings",
+            href: "/site-executive/bookings",
+            icon: Calendar,
+          },
+          {
+            label: "Job Cards",
+            href: "/site-executive/job-cards",
+            icon: ClipboardList,
+          },
+          {
+            label: "Inventory",
+            href: "/site-executive/inventory",
+            icon: Package,
+          },
         ],
       },
       {
         title: "Management",
         links: [
           { label: "Staff", href: "/site-executive/staff", icon: UserCog },
-          { label: "Documents", href: "/site-executive/documents", icon: FileText },
+          {
+            label: "Documents",
+            href: "/site-executive/documents",
+            icon: FileText,
+          },
         ],
       },
     ],
@@ -179,8 +240,16 @@ export const roles: Record<string, RoleConfig> = {
         title: "Workshop",
         links: [
           { label: "Service Queue", href: "/service", icon: ClipboardCheck },
-          { label: "Booking Calendar", href: "/service/booking-calendar", icon: Calendar },
-          { label: "Repair Orders", href: "/service/repair-orders", icon: ClipboardList },
+          {
+            label: "Booking Calendar",
+            href: "/service/booking-calendar",
+            icon: Calendar,
+          },
+          {
+            label: "Repair Orders",
+            href: "/service/repair-orders",
+            icon: ClipboardList,
+          },
         ],
       },
       {
@@ -188,14 +257,22 @@ export const roles: Record<string, RoleConfig> = {
         links: [
           { label: "Customers", href: "/service/customers", icon: Users },
           { label: "Vehicles", href: "/service/vehicles", icon: Car },
-          { label: "Communications", href: "/service/communications", icon: MessageSquare },
+          {
+            label: "Communications",
+            href: "/service/communications",
+            icon: MessageSquare,
+          },
         ],
       },
       {
         title: "Workshop Mgmt",
         links: [
           { label: "Technicians", href: "/service/technicians", icon: Wrench },
-          { label: "Parts & Inventory", href: "/service/parts-inventory", icon: Package },
+          {
+            label: "Parts & Inventory",
+            href: "/service/parts-inventory",
+            icon: Package,
+          },
           { label: "Documents", href: "/service/documents", icon: FileText },
         ],
       },
@@ -214,8 +291,16 @@ export const roles: Record<string, RoleConfig> = {
         title: "Deliveries",
         links: [
           { label: "Delivery Queue", href: "/delivery", icon: Truck },
-          { label: "Delivery Calendar", href: "/delivery/calendar", icon: Calendar },
-          { label: "Delivery Orders", href: "/delivery/orders", icon: ClipboardList },
+          // {
+          //   label: "Delivery Calendar",
+          //   href: "/delivery/calendar",
+          //   icon: Calendar,
+          // },
+          {
+            label: "Delivery Orders",
+            href: "/delivery/orders",
+            icon: ClipboardList,
+          },
         ],
       },
       {
@@ -223,14 +308,26 @@ export const roles: Record<string, RoleConfig> = {
         links: [
           { label: "Customers", href: "/delivery/customers", icon: Users },
           { label: "Vehicles", href: "/delivery/vehicles", icon: Car },
-          { label: "Communications", href: "/delivery/communications", icon: MessageSquare },
+          {
+            label: "Communications",
+            href: "/delivery/communications",
+            icon: MessageSquare,
+          },
         ],
       },
       {
         title: "Operations",
         links: [
-          { label: "Contractors", href: "/delivery/contractors", icon: UserCog },
-          { label: "Checklists", href: "/delivery/checklists", icon: ClipboardCheck },
+          {
+            label: "Contractors",
+            href: "/delivery/contractors",
+            icon: UserCog,
+          },
+          {
+            label: "Checklists",
+            href: "/delivery/checklists",
+            icon: ClipboardCheck,
+          },
           { label: "Documents", href: "/delivery/documents", icon: FileText },
         ],
       },
