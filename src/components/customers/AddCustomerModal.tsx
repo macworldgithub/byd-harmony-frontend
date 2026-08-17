@@ -68,6 +68,7 @@ interface AddCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (created: unknown) => void;
+  defaultLocationId?: string;
 }
 
 function getAuthHeaders(): HeadersInit {
@@ -77,53 +78,48 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
-export function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCustomerModalProps) {
+export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId }: AddCustomerModalProps) {
   const [values, setValues] = useState<CustomerFormValues>(INITIAL_VALUES);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
-  // inside the component, with other useState:
-const [locations, setLocations] = useState<Location[]>([]);
-const [locationsLoading, setLocationsLoading] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setValues(INITIAL_VALUES);
-      setError(null);
-      setIsLoading(false);
-      setTimeout(() => firstNameRef.current?.focus(), 80);
-    }
-  }, [isOpen]);
-useEffect(() => {
-  if (!isOpen) return;
+    if (!isOpen) return;
 
-  setValues(INITIAL_VALUES);
-  setError(null);
-  setIsLoading(false);
-  setTimeout(() => firstNameRef.current?.focus(), 80);
+    setValues({
+      ...INITIAL_VALUES,
+      preferredLocationId: defaultLocationId || "",
+    });
+    setError(null);
+    setIsLoading(false);
+    setTimeout(() => firstNameRef.current?.focus(), 80);
 
-  // load locations
-  const loadLocations = async () => {
-    setLocationsLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/locations`, {
-        headers: getAuthHeaders(),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && Array.isArray(data?.data)) {
-        setLocations(data.data);
-      } else {
+    // load locations
+    const loadLocations = async () => {
+      setLocationsLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/locations`, {
+          headers: getAuthHeaders(),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && Array.isArray(data?.data)) {
+          setLocations(data.data);
+        } else {
+          setLocations([]);
+        }
+      } catch {
         setLocations([]);
+      } finally {
+        setLocationsLoading(false);
       }
-    } catch {
-      setLocations([]);
-    } finally {
-      setLocationsLoading(false);
-    }
-  };
+    };
 
-  loadLocations();
-}, [isOpen]);
+    loadLocations();
+  }, [isOpen, defaultLocationId]);
+
   const update = <K extends keyof CustomerFormValues>(key: K, value: CustomerFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
@@ -143,6 +139,7 @@ useEffect(() => {
     setError(null);
 
     try {
+      const locId = values.preferredLocationId.trim() || defaultLocationId || undefined;
       const body = {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
@@ -154,7 +151,8 @@ useEffect(() => {
         postcode: values.postcode.trim() || undefined,
         dateOfBirth: values.dateOfBirth || undefined,
         licenceNumber: values.licenceNumber.trim() || undefined,
-        preferredLocationId: values.preferredLocationId.trim() || undefined,
+        preferredLocationId: locId,
+        locationId: locId,
         lifecycleStage: values.lifecycleStage,
         source: values.source.trim() || undefined,
         consentSms: values.consentSms,

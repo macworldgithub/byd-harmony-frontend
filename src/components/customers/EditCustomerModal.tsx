@@ -43,6 +43,7 @@ export interface EditCustomerModalProps {
   onClose: () => void;
   customer: CustomerDetail | null;
   onSuccess?: (updated: CustomerDetail) => void;
+  defaultLocationId?: string;
 }
 
 export function EditCustomerModal({
@@ -50,6 +51,7 @@ export function EditCustomerModal({
   onClose,
   customer,
   onSuccess,
+  defaultLocationId,
 }: EditCustomerModalProps) {
   const [values, setValues] = useState<Partial<CustomerDetail>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -61,12 +63,15 @@ export function EditCustomerModal({
   /* Populate form from customer prop */
   useEffect(() => {
     if (isOpen && customer) {
-      setValues({ ...customer });
+      setValues({
+        ...customer,
+        preferredLocationId: customer.preferredLocationId || defaultLocationId || "",
+      });
       setError(null);
       setIsLoading(false);
       setTimeout(() => firstNameRef.current?.focus(), 80);
     }
-  }, [isOpen, customer]);
+  }, [isOpen, customer, defaultLocationId]);
 
   /* Load locations */
   useEffect(() => {
@@ -111,6 +116,7 @@ export function EditCustomerModal({
     setError(null);
 
     try {
+      const locId = values.preferredLocationId || defaultLocationId || undefined;
       const body = {
         firstName: values.firstName?.trim(),
         lastName: values.lastName?.trim(),
@@ -122,7 +128,8 @@ export function EditCustomerModal({
         postcode: values.postcode?.trim() || undefined,
         dateOfBirth: values.dateOfBirth || undefined,
         licenceNumber: values.licenceNumber?.trim() || undefined,
-        preferredLocationId: values.preferredLocationId || undefined,
+        preferredLocationId: locId,
+        locationId: locId,
         lifecycleStage: values.lifecycleStage,
         source: values.source?.trim() || undefined,
         consentSms: values.consentSms,
