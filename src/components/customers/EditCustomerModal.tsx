@@ -136,7 +136,6 @@ export function EditCustomerModal({
         dateOfBirth: values.dateOfBirth || undefined,
         licenceNumber: values.licenceNumber?.trim() || undefined,
         preferredLocationId: locId,
-        locationId: locId,
         lifecycleStage: values.lifecycleStage,
         source: values.source?.trim() || undefined,
         consentSms: values.consentSms,
@@ -341,27 +340,6 @@ export function EditCustomerModal({
             />
           </Field>
         </div>
-
-        <Field label="Preferred location">
-          <select
-            value={getLocationId(values.preferredLocationId ?? null)}
-            onChange={(e) =>
-              update("preferredLocationId", e.target.value || null as unknown as string)
-            }
-            disabled={isLoading || locationsLoading}
-            className={inputClass}
-          >
-            <option value="">
-              {locationsLoading ? "Loading locations..." : "Select a location (optional)"}
-            </option>
-            {locations.map((loc) => (
-              <option key={loc._id} value={loc._id}>
-                {loc.name} — {loc.state}, {loc.address}
-                {loc.suburb ? `, ${loc.suburb}` : ""}
-              </option>
-            ))}
-          </select>
-        </Field>
 
         <div>
           <p className="mb-2 text-sm font-semibold text-neutral-700">

@@ -89,35 +89,27 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
   useEffect(() => {
     if (!isOpen) return;
 
+    let locId = defaultLocationId || "";
+    if (!locId && typeof window !== "undefined") {
+      locId = localStorage.getItem("selectedSiteId") || "";
+      if (!locId) {
+        const savedLocStr = localStorage.getItem("selectedLocation");
+        if (savedLocStr) {
+          try {
+            const parsed = JSON.parse(savedLocStr);
+            locId = parsed._id || parsed.id || "";
+          } catch {}
+        }
+      }
+    }
+
     setValues({
       ...INITIAL_VALUES,
-      preferredLocationId: defaultLocationId || "",
+      preferredLocationId: locId,
     });
     setError(null);
     setIsLoading(false);
     setTimeout(() => firstNameRef.current?.focus(), 80);
-
-    // load locations
-    const loadLocations = async () => {
-      setLocationsLoading(true);
-      try {
-        const res = await fetch(`${API_URL}/locations`, {
-          headers: getAuthHeaders(),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && Array.isArray(data?.data)) {
-          setLocations(data.data);
-        } else {
-          setLocations([]);
-        }
-      } catch {
-        setLocations([]);
-      } finally {
-        setLocationsLoading(false);
-      }
-    };
-
-    loadLocations();
   }, [isOpen, defaultLocationId]);
 
   const update = <K extends keyof CustomerFormValues>(key: K, value: CustomerFormValues[K]) => {
@@ -139,7 +131,11 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
     setError(null);
 
     try {
-      const locId = values.preferredLocationId.trim() || defaultLocationId || undefined;
+      let locId = values.preferredLocationId.trim() || defaultLocationId || undefined;
+      if (!locId && typeof window !== "undefined") {
+        locId = localStorage.getItem("selectedSiteId") || undefined;
+      }
+
       const body = {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
@@ -152,7 +148,6 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
         dateOfBirth: values.dateOfBirth || undefined,
         licenceNumber: values.licenceNumber.trim() || undefined,
         preferredLocationId: locId,
-        locationId: locId,
         lifecycleStage: values.lifecycleStage,
         source: values.source.trim() || undefined,
         consentSms: values.consentSms,
@@ -355,25 +350,6 @@ export function AddCustomerModal({ isOpen, onClose, onSuccess, defaultLocationId
             />
           </Field>
         </div>
-
-        <Field label="Preferred location">
-  <select
-    value={values.preferredLocationId}
-    onChange={(e) => update("preferredLocationId", e.target.value)}
-    disabled={isLoading || locationsLoading}
-    className={inputClass}
-  >
-    <option value="">
-      {locationsLoading ? "Loading locations..." : "Select a location (optional)"}
-    </option>
-    {locations.map((loc) => (
-      <option key={loc._id} value={loc._id}>
-        {loc.name} — {loc.state}, {loc.address}
-        {loc.suburb ? `, ${loc.suburb}` : ""}
-      </option>
-    ))}
-  </select>
-</Field>
 
         <div>
           <p className="mb-2 text-sm font-semibold text-neutral-700">Communication consent</p>
