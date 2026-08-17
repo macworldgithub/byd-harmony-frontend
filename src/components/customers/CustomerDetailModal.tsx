@@ -23,6 +23,9 @@ import { API_URL } from "@/lib/config";
 import { Badge } from "@/components/ui/Badge";
 
 /* ─── Types ─────────────────────────────────────────────────── */
+/** The API may return preferredLocationId as a populated object or a plain ID string */
+export type PopulatedLocation = { _id: string; name: string };
+
 export interface CustomerDetail {
   _id: string;
   firstName: string;
@@ -35,7 +38,8 @@ export interface CustomerDetail {
   postcode: string;
   dateOfBirth: string;
   licenceNumber: string;
-  preferredLocationId: string | null;
+  /** Populated by the API as { _id, name } or a bare ID string or null */
+  preferredLocationId: PopulatedLocation | string | null;
   lifecycleStage: string;
   source: string;
   consentSms: boolean;
@@ -45,6 +49,20 @@ export interface CustomerDetail {
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Safely extract the location ID string regardless of populated shape */
+export function getLocationId(loc: CustomerDetail["preferredLocationId"]): string {
+  if (!loc) return "";
+  if (typeof loc === "object") return loc._id;
+  return loc;
+}
+
+/** Safely extract the location display name */
+export function getLocationName(loc: CustomerDetail["preferredLocationId"]): string {
+  if (!loc) return "";
+  if (typeof loc === "object") return loc.name;
+  return loc; // fallback: show raw ID
 }
 
 type StageTone = "blue" | "green" | "orange" | "neutral";
@@ -244,6 +262,9 @@ export function CustomerDetailModal({
             </DetailRow>
             <DetailRow icon={<Globe className="h-4 w-4" />} label="Source">
               {customer.source || "\u2014"}
+            </DetailRow>
+            <DetailRow icon={<MapPin className="h-4 w-4" />} label="Preferred Location">
+              {getLocationName(customer.preferredLocationId) || "\u2014"}
             </DetailRow>
           </div>
 

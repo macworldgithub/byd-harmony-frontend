@@ -163,6 +163,7 @@ useEffect(() => {
         notes: values.notes.trim() || undefined,
       };
 
+ 
       const res = await fetch(`${API_URL}/customers`, {
         method: "POST",
         headers: getAuthHeaders(),

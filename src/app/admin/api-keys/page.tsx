@@ -1,7 +1,15 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, PanelHeader } from "@/components/dashboard/Panel";
-import { ShoppingCart, Wrench, Truck, Shield, Globe, Copy, Lock, ExternalLink } from "lucide-react";
+import { ShoppingCart, Wrench, Truck, Shield, Globe, Copy, ExternalLink, Plus, Key, Calendar } from "lucide-react";
 import { apiBaseUrl, apiScopes } from "@/lib/data/admin-overview";
+import { AddApiKeyModal } from "@/components/api-keys/AddApiKeyModal";
+import { ApiKeyDetailModal, ApiKeyDetail } from "@/components/api-keys/ApiKeyDetailModal";
+import { EditApiKeyModal } from "@/components/api-keys/EditApiKeyModal";
+import { API_URL } from "@/lib/config";
+import { Badge } from "@/components/ui/Badge";
 
 const scopeIcons: Record<string, React.ElementType> = {
   Sales: ShoppingCart,
@@ -24,22 +32,99 @@ const scopeIconColors: Record<string, string> = {
   purple: "text-purple-500",
 };
 
+interface ApiKeyData {
+  _id: string;
+  name: string;
+  keyPrefix: string;
+  role?: string;
+  locationId?: string;
+  department?: string;
+  isActive: boolean;
+  scopes?: string[];
+  retryStrategy?: string;
+  maxRetries?: number;
+  createdAt: string;
+}
+
 export default function AdminApiKeysPage() {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Details Modal State
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedApiKeyId, setSelectedApiKeyId] = useState<string | null>(null);
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedApiKeyForEdit, setSelectedApiKeyForEdit] = useState<ApiKeyDetail | null>(null);
+
+  const fetchApiKeys = async () => {
+    setIsLoading(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_URL}/api-keys`, { headers });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setApiKeys(data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch API keys", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchApiKeys();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const handleRowClick = (id: string) => {
+    setSelectedApiKeyId(id);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleEditClick = (apiKey: ApiKeyDetail) => {
+    setIsDetailModalOpen(false);
+    setSelectedApiKeyForEdit(apiKey);
+    setIsEditModalOpen(true);
+  };
+
   return (
     <div>
       <PageHeader
         title="API Keys"
         subtitle="Manage API keys for external role-based applications."
         action={
-          <a
-            href={`${apiBaseUrl.replace("/v1", "")}/docs`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            API Docs
-          </a>
+          <div className="flex items-center gap-3">
+            <a
+              href={`${apiBaseUrl.replace("/v1", "")}/docs`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              API Docs
+            </a>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Create API Key
+            </button>
+          </div>
         }
       />
 
@@ -81,32 +166,123 @@ export default function AdminApiKeysPage() {
           </div>
         </Panel>
 
-        {/* Auth warning — matches reference screenshot */}
+        {/* API Keys Table */}
         <Panel>
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-50">
-              <Lock className="h-4 w-4 text-rose-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">Admin Authentication Required</p>
-              <p className="mt-1 text-sm text-neutral-500 leading-relaxed">
-                Enter an existing admin API key to view and manage all keys. The first key must be
-                created manually via the REST API or database.
-              </p>
-              <div className="mt-4 flex items-center gap-3">
-                <input
-                  type="password"
-                  placeholder="Paste admin API key…"
-                  className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
-                <button className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors">
-                  Unlock
-                </button>
-              </div>
+          <PanelHeader title="Active API Keys" />
+          <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-neutral-200">
+                <thead className="bg-neutral-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Prefix
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Role / Dept
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 bg-white">
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-sm text-neutral-500">
+                        Loading API keys...
+                      </td>
+                    </tr>
+                  ) : apiKeys.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-sm text-neutral-500">
+                        No API keys found. Click &quot;Create API Key&quot; to add one.
+                      </td>
+                    </tr>
+                  ) : (
+                    apiKeys.map((key) => (
+                      <tr 
+                        key={key._id} 
+                        className="hover:bg-neutral-50 transition-colors cursor-pointer"
+                        onClick={() => handleRowClick(key._id)}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                              <Key className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm font-semibold text-neutral-900">{key.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <code className="text-xs font-mono text-neutral-600 bg-neutral-100 px-2 py-1 rounded">{key.keyPrefix}...</code>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col gap-1">
+                            {key.role && (
+                              <span className="text-xs text-neutral-600">Role: <span className="font-semibold capitalize">{key.role}</span></span>
+                            )}
+                            {key.department && (
+                              <span className="text-xs text-neutral-600">Dept: <span className="font-semibold capitalize">{key.department}</span></span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge variant={key.isActive ? "success" : "neutral"}>
+                            {key.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 text-sm text-neutral-500">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {formatDate(key.createdAt)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </Panel>
       </div>
+
+      <AddApiKeyModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        onSuccess={() => fetchApiKeys()}
+      />
+
+      <ApiKeyDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedApiKeyId(null);
+        }}
+        apiKeyId={selectedApiKeyId}
+        onEdit={handleEditClick}
+        onDeleted={(id) => {
+          setApiKeys((prev) => prev.filter((k) => k._id !== id));
+        }}
+      />
+      
+      <EditApiKeyModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedApiKeyForEdit(null);
+        }}
+        apiKey={selectedApiKeyForEdit}
+        onSuccess={() => {
+          fetchApiKeys();
+        }}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Pencil, Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/config";
 import type { CustomerDetail } from "./CustomerDetailModal";
+import { getLocationId } from "./CustomerDetailModal";
 
 export type LifecycleStage =
   | "prospect"
@@ -58,19 +59,28 @@ export function EditCustomerModal({
   const [locationsLoading, setLocationsLoading] = useState(false);
   const firstNameRef = useRef<HTMLInputElement>(null);
 
-  /* Populate form from customer prop */
+  /* Populate form + load locations — merged to avoid race condition */
   useEffect(() => {
-    if (isOpen && customer) {
-      setValues({ ...customer });
-      setError(null);
-      setIsLoading(false);
-      setTimeout(() => firstNameRef.current?.focus(), 80);
+    if (!isOpen || !customer) {
+      if (!isOpen) {
+        setLocations([]);
+        setLocationsLoading(false);
+      }
+      return;
     }
-  }, [isOpen, customer]);
 
-  /* Load locations */
-  useEffect(() => {
-    if (!isOpen) return;
+    // Set values synchronously so the select value is in state before
+    // locations arrive. Extract the ID string from the populated object
+    // (API returns preferredLocationId as { _id, name } not a plain string).
+    setValues({
+      ...customer,
+      preferredLocationId: getLocationId(customer.preferredLocationId),
+    } as typeof customer);
+    setError(null);
+    setIsLoading(false);
+    setTimeout(() => firstNameRef.current?.focus(), 80);
+
+    // Load locations async — when they arrive the matching option will render
     const loadLocations = async () => {
       setLocationsLoading(true);
       try {
@@ -90,7 +100,7 @@ export function EditCustomerModal({
       }
     };
     loadLocations();
-  }, [isOpen]);
+  }, [isOpen, customer]);
 
   const update = <K extends keyof CustomerDetail>(
     key: K,
@@ -330,8 +340,10 @@ export function EditCustomerModal({
 
         <Field label="Preferred location">
           <select
-            value={values.preferredLocationId ?? ""}
-            onChange={(e) => update("preferredLocationId", e.target.value)}
+            value={getLocationId(values.preferredLocationId ?? null)}
+            onChange={(e) =>
+              update("preferredLocationId", e.target.value || null as unknown as string)
+            }
             disabled={isLoading || locationsLoading}
             className={inputClass}
           >
