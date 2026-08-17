@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
@@ -118,7 +118,7 @@ function getInitialSiteName(): string {
   return name;
 }
 
-export default function SiteCustomersPage() {
+function SiteCustomersPageInner() {
   const searchParams = useSearchParams();
 
   /* ── Location state initialized synchronously ──────────── */
@@ -620,5 +620,13 @@ export default function SiteCustomersPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function SiteCustomersPage() {
+  return (
+    <Suspense fallback={null}>
+      <SiteCustomersPageInner />
+    </Suspense>
   );
 }
