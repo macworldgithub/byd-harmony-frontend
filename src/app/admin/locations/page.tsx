@@ -5,7 +5,17 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { AddLocation } from "@/components/location/AddLocation";
-import { Building2, Phone, Mail, Plus, Loader2, AlertCircle } from "lucide-react";
+import {
+  Building2,
+  Phone,
+  Mail,
+  Plus,
+  Loader2,
+  AlertCircle,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { API_URL } from "@/lib/config";
 
 interface Location {
   _id: string;
@@ -23,6 +33,8 @@ interface Location {
 
 export default function AdminLocationsPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +44,7 @@ export default function AdminLocationsPage() {
     setError(null);
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const res = await fetch("http://localhost:5000/api/v1/locations", {
+      const res = await fetch(`${API_URL}/locations`, {
         headers: {
           "Content-Type": "application/json",
           ...(accessToken ? { Authorization: "Bearer " + accessToken } : {}),
@@ -54,6 +66,31 @@ export default function AdminLocationsPage() {
   useEffect(() => {
     fetchLocations();
   }, [fetchLocations]);
+
+  const handleDelete = async (loc: Location) => {
+    if (!window.confirm(`Are you sure you want to delete "${loc.name}"?`)) return;
+    setDeletingId(loc._id);
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const res = await fetch(`${API_URL}/locations/${loc._id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: "Bearer " + accessToken } : {}),
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.message || "Failed to delete location.");
+      } else {
+        fetchLocations();
+      }
+    } catch {
+      alert("Unable to reach the server. Please check your connection.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const formatAddress = (loc: Location) => {
     const parts = [loc.address, loc.suburb, loc.state, loc.postcode].filter(Boolean);
@@ -152,17 +189,57 @@ export default function AdminLocationsPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {/* Edit */}
+                  <button
+                    id={`edit-location-${loc._id}`}
+                    title="Edit location"
+                    onClick={() => setEditingLocation(loc)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+
+                  {/* Delete */}
+                  <button
+                    id={`delete-location-${loc._id}`}
+                    title="Delete location"
+                    onClick={() => handleDelete(loc)}
+                    disabled={deletingId === loc._id}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deletingId === loc._id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </Panel>
           ))}
         </div>
       )}
 
+      {/* Add Location modal */}
       <AddLocation
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSuccess={() => {
           setIsAddOpen(false);
+          fetchLocations();
+        }}
+      />
+
+      {/* Edit Location modal */}
+      <AddLocation
+        isOpen={Boolean(editingLocation)}
+        editLocation={editingLocation}
+        onClose={() => setEditingLocation(null)}
+        onSuccess={() => {
+          setEditingLocation(null);
           fetchLocations();
         }}
       />

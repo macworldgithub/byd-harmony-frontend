@@ -2,14 +2,31 @@
 
 import { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
+import { API_URL } from "@/lib/config";
 
 const TYPE_OPTIONS = ["combined", "sales", "service", "delivery"] as const;
 type LocationType = (typeof TYPE_OPTIONS)[number];
+
+interface LocationData {
+  _id: string;
+  name: string;
+  type: string;
+  address: string;
+  suburb: string;
+  state: string;
+  postcode: string;
+  phone: string;
+  email: string;
+  capacity: number;
+  isActive: boolean;
+}
 
 interface AddLocationProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /** When provided the modal operates in edit/update mode */
+  editLocation?: LocationData | null;
 }
 
 interface FormState {
@@ -36,18 +53,35 @@ const DEFAULT_FORM: FormState = {
   email: "",
 };
 
-export function AddLocation({ isOpen, onClose, onSuccess }: AddLocationProps) {
+export function AddLocation({ isOpen, onClose, onSuccess, editLocation }: AddLocationProps) {
+  const isEditMode = Boolean(editLocation);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset form when modal opens
+  // Populate form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setForm(DEFAULT_FORM);
       setError(null);
+      if (editLocation) {
+        setForm({
+          name: editLocation.name ?? "",
+          type: (TYPE_OPTIONS.includes(editLocation.type as LocationType)
+            ? editLocation.type
+            : "combined") as LocationType,
+          address: editLocation.address ?? "",
+          suburb: editLocation.suburb ?? "",
+          state: editLocation.state ?? "VIC",
+          postcode: editLocation.postcode ?? "",
+          phone: editLocation.phone ?? "",
+          capacity: String(editLocation.capacity ?? 10),
+          email: editLocation.email ?? "",
+        });
+      } else {
+        setForm(DEFAULT_FORM);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editLocation]);
 
   // Close on Escape
   useEffect(() => {
@@ -71,31 +105,41 @@ export function AddLocation({ isOpen, onClose, onSuccess }: AddLocationProps) {
     setError(null);
 
     const accessToken = localStorage.getItem("accessToken");
+    const body = {
+      name: form.name.trim(),
+      type: form.type,
+      address: form.address.trim(),
+      suburb: form.suburb.trim(),
+      state: form.state.trim(),
+      postcode: form.postcode.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim(),
+      capacity: Number(form.capacity) || 0,
+    };
 
     try {
-      const res = await fetch("http://localhost:5000/api/v1/locations", {
-        method: "POST",
+      const url = isEditMode
+        ? `${API_URL}/locations/${editLocation!._id}`
+        : `${API_URL}/locations`;
+
+      const res = await fetch(url, {
+        method: isEditMode ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           ...(accessToken ? { Authorization: "Bearer " + accessToken } : {}),
         },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          type: form.type,
-          address: form.address.trim(),
-          suburb: form.suburb.trim(),
-          state: form.state.trim(),
-          postcode: form.postcode.trim(),
-          phone: form.phone.trim(),
-          email: form.email.trim(),
-          capacity: Number(form.capacity) || 0,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.message || "Failed to create location. Please try again.");
+        setError(
+          data.message ||
+            (isEditMode
+              ? "Failed to update location. Please try again."
+              : "Failed to create location. Please try again.")
+        );
         setIsLoading(false);
         return;
       }
@@ -137,7 +181,7 @@ export function AddLocation({ isOpen, onClose, onSuccess }: AddLocationProps) {
             id="add-location-title"
             className="text-[17px] font-bold text-neutral-900"
           >
-            Add Location
+            {isEditMode ? "Edit Location" : "Add Location"}
           </h2>
           <button
             id="add-location-close"
@@ -325,8 +369,10 @@ export function AddLocation({ isOpen, onClose, onSuccess }: AddLocationProps) {
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating...
+                  {isEditMode ? "Saving..." : "Creating..."}
                 </>
+              ) : isEditMode ? (
+                "Save Changes"
               ) : (
                 "Create Location"
               )}
