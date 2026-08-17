@@ -112,10 +112,10 @@ export default function ExecutiveBookingsPage() {
         title="Bookings"
         subtitle="Platform-wide bookings overview."
         action={
-          <Toolbar 
-            searchPlaceholder="Search bookings..." 
-            filterLabel="All Types" 
-            ctaLabel="New Booking" 
+          <Toolbar
+            searchPlaceholder="Search bookings..."
+            filterLabel="All Types"
+            ctaLabel="New Booking"
             onCtaClick={() => {
               setSelectedBooking(null);
               setIsModalOpen(true);
@@ -127,7 +127,7 @@ export default function ExecutiveBookingsPage() {
       <Panel padded={false}>
         <div className="overflow-x-auto">
           {error && <div className="p-4 text-sm text-red-600 bg-red-50">{error}</div>}
-          
+
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50">
@@ -156,10 +156,10 @@ export default function ExecutiveBookingsPage() {
                   const { date, time } = formatDateTime(booking.serviceDateTime || booking.scheduledAt);
                   const displayStatus = booking.status || "Pending";
                   const tone = statusTone[displayStatus] || "neutral";
-                  
+
                   return (
-                    <tr 
-                      key={booking._id} 
+                    <tr
+                      key={booking._id}
                       onClick={() => setViewBookingId(booking._id)}
                       className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors cursor-pointer"
                     >
@@ -223,9 +223,9 @@ export default function ExecutiveBookingsPage() {
         </div>
       </Panel>
 
-      <NewBookingModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <NewBookingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         booking={selectedBooking}
         onSuccess={() => {
           setIsModalOpen(false);
@@ -233,10 +233,10 @@ export default function ExecutiveBookingsPage() {
         }}
       />
 
-      <BookingDetailsModal 
-        isOpen={!!viewBookingId} 
-        onClose={() => setViewBookingId(null)} 
-        bookingId={viewBookingId} 
+      <BookingDetailsModal
+        isOpen={!!viewBookingId}
+        onClose={() => setViewBookingId(null)}
+        bookingId={viewBookingId}
       />
     </div>
   );
