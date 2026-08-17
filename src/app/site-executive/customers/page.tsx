@@ -81,38 +81,58 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+function getInitialLocationId(searchParams: ReturnType<typeof useSearchParams>): string {
+  if (typeof window === "undefined") return "";
+  const urlSite = searchParams.get("site");
+  if (urlSite) return urlSite;
+
+  let id = localStorage.getItem("selectedSiteId") || "";
+  if (!id) {
+    const savedLocStr = localStorage.getItem("selectedLocation");
+    if (savedLocStr) {
+      try {
+        const parsed = JSON.parse(savedLocStr);
+        id = parsed._id || parsed.id || "";
+      } catch {
+        // ignore
+      }
+    }
+  }
+  return id;
+}
+
+function getInitialSiteName(): string {
+  if (typeof window === "undefined") return "";
+  let name = localStorage.getItem("selectedSite") || "";
+  if (!name) {
+    const savedLocStr = localStorage.getItem("selectedLocation");
+    if (savedLocStr) {
+      try {
+        const parsed = JSON.parse(savedLocStr);
+        name = parsed.name || "";
+      } catch {
+        // ignore
+      }
+    }
+  }
+  return name;
+}
+
 export default function SiteCustomersPage() {
   const searchParams = useSearchParams();
 
-  /* ── Location state from localStorage / URL ────────────── */
-  const [locationId, setLocationId] = useState<string>("");
-  const [siteName, setSiteName] = useState<string>("");
+  /* ── Location state initialized synchronously ──────────── */
+  const [locationId, setLocationId] = useState<string>(() =>
+    getInitialLocationId(searchParams)
+  );
+  const [siteName, setSiteName] = useState<string>(() => getInitialSiteName());
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    let id = localStorage.getItem("selectedSiteId");
-    let name = localStorage.getItem("selectedSite") || "";
-
-    if (!id) {
-      const savedLocStr = localStorage.getItem("selectedLocation");
-      if (savedLocStr) {
-        try {
-          const parsed = JSON.parse(savedLocStr);
-          id = parsed._id || parsed.id || "";
-          if (!name && parsed.name) name = parsed.name;
-        } catch {
-          // ignore
-        }
-      }
-    }
-
-    const urlSite = searchParams.get("site");
-    if (urlSite) id = urlSite;
-
-    if (id) setLocationId(id);
-    if (name) setSiteName(name);
-  }, [searchParams]);
+    const currentId = getInitialLocationId(searchParams);
+    const currentName = getInitialSiteName();
+    if (currentId && currentId !== locationId) setLocationId(currentId);
+    if (currentName && currentName !== siteName) setSiteName(currentName);
+  }, [searchParams, locationId, siteName]);
 
   /* ── Customer List & Pagination state ────────────────────── */
   const [customers, setCustomers] = useState<CustomerDetail[]>([]);
@@ -122,6 +142,9 @@ export default function SiteCustomersPage() {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
+
+  /* Request Sequence Ref to prevent Race Conditions */
+  const requestSeq = useRef(0);
 
   /* Search */
   const [searchQuery, setSearchQuery] = useState("");
@@ -143,6 +166,7 @@ export default function SiteCustomersPage() {
   /* ── Fetch Customers with Location & Pagination ──────────── */
   const fetchCustomers = useCallback(
     async (pageNum: number = 1) => {
+      const currentSeq = ++requestSeq.current;
       setLoading(true);
       setListError(null);
       try {
@@ -153,6 +177,9 @@ export default function SiteCustomersPage() {
 
         const res = await fetch(url, { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
+
+        // Ignore response if a newer request was dispatched
+        if (currentSeq !== requestSeq.current) return;
 
         if (res.ok) {
           const list = Array.isArray(json?.data) ? json.data : [];
@@ -166,9 +193,13 @@ export default function SiteCustomersPage() {
           setListError(json?.message ?? `Failed to load customers (${res.status})`);
         }
       } catch {
-        setListError("Unable to reach the server. Please check your connection.");
+        if (currentSeq === requestSeq.current) {
+          setListError("Unable to reach the server. Please check your connection.");
+        }
       } finally {
-        setLoading(false);
+        if (currentSeq === requestSeq.current) {
+          setLoading(false);
+        }
       }
     },
     [locationId, limit]

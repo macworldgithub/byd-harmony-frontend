@@ -233,7 +233,7 @@ export default function AdminApiKeysPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge variant={key.isActive ? "success" : "neutral"}>
+                          <Badge tone={key.isActive ? "green" : "neutral"}>
                             {key.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </td>

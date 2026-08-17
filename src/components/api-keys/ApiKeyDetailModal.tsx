@@ -201,7 +201,7 @@ export function ApiKeyDetailModal({ apiKeyId, isOpen, onClose, onEdit, onDeleted
                       {apiKey.keyPrefix}...
                     </code>
                     <span>•</span>
-                    <Badge variant={apiKey.isActive ? "success" : "neutral"}>
+                    <Badge tone={apiKey.isActive ? "green" : "neutral"}>
                       {apiKey.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
