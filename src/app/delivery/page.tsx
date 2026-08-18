@@ -54,8 +54,8 @@ interface VehicleItem {
   make?: string;
   model?: string;
   year?: number | string;
-  customerId?: string | { _id: string; [key: string]: any };
-  customer?: string | { _id: string; [key: string]: any };
+  customerId?: string | { _id: string; [key: string]: unknown };
+  customer?: string | { _id: string; [key: string]: unknown };
 }
 
 function getAuthHeaders(): HeadersInit {
@@ -74,7 +74,6 @@ export default function DeliveryQueuePage() {
   // Modals state
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<DeliveryItemData | null>(null);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -161,12 +160,69 @@ export default function DeliveryQueuePage() {
 
   // Initial load
   useEffect(() => {
-    fetchDeliveries(locationFilter || undefined);
-  }, [fetchDeliveries, locationFilter]);
+    let ignore = false;
+    const loadDeliveries = async () => {
+      try {
+        const url = locationFilter
+          ? `${API_URL}/schedule-deliveries?locationId=${encodeURIComponent(locationFilter)}`
+          : `${API_URL}/schedule-deliveries`;
+
+        const res = await fetch(url, { headers: getAuthHeaders() });
+        const json = await res.json().catch(() => ({}));
+
+        if (!ignore) {
+          if (res.ok && json.success) {
+            setDeliveries(Array.isArray(json.data) ? json.data : []);
+          } else {
+            setDeliveries([]);
+            if (!res.ok && res.status !== 404) {
+              setDeliveriesError(json.message || "Failed to load schedule deliveries.");
+            }
+          }
+        }
+      } catch {
+        if (!ignore) {
+          setDeliveriesError("Unable to reach the server.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingDeliveries(false);
+        }
+      }
+    };
+
+    loadDeliveries();
+    return () => {
+      ignore = true;
+    };
+  }, [locationFilter]);
 
   useEffect(() => {
-    fetchDropdowns();
-  }, [fetchDropdowns]);
+    let ignore = false;
+    const loadDropdowns = async () => {
+      try {
+        const headers = getAuthHeaders();
+        const [custRes, locRes, vehRes] = await Promise.all([
+          fetch(`${API_URL}/customers`, { headers }).then((r) => r.json()).catch(() => ({})),
+          fetch(`${API_URL}/locations`, { headers }).then((r) => r.json()).catch(() => ({})),
+          fetch(`${API_URL}/vehicles`, { headers }).then((r) => r.json()).catch(() => ({})),
+        ]);
+
+        if (!ignore) {
+          setCustomers(Array.isArray(custRes?.data) ? custRes.data : Array.isArray(custRes) ? custRes : []);
+          setLocations(Array.isArray(locRes?.data) ? locRes.data : Array.isArray(locRes) ? locRes : []);
+          setVehicles(Array.isArray(vehRes?.data) ? vehRes.data : Array.isArray(vehRes) ? vehRes : []);
+        }
+      } catch (err) {
+        console.error("Failed to load options:", err);
+      }
+    };
+
+    loadDropdowns();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const openModal = () => {
     setCustomerId("");
@@ -243,8 +299,8 @@ export default function DeliveryQueuePage() {
       } else {
         setEditError(data.message || "Failed to update delivery.");
       }
-    } catch (err: any) {
-      setEditError(err.message || "Unable to connect to the server.");
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : "Unable to connect to the server.");
     } finally {
       setIsEditSubmitting(false);
     }
@@ -295,8 +351,8 @@ export default function DeliveryQueuePage() {
       } else {
         setSubmitError(data.message || "Failed to schedule delivery.");
       }
-    } catch (err: any) {
-      setSubmitError(err.message || "Unable to connect to the server.");
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : "Unable to connect to the server.");
     } finally {
       setIsSubmitting(false);
     }
@@ -304,7 +360,6 @@ export default function DeliveryQueuePage() {
 
   // 3. GET /api/v1/schedule-deliveries/:id
   const handleViewDeliveryDetail = async (id: string) => {
-    setIsLoadingDetail(true);
     try {
       const res = await fetch(`${API_URL}/schedule-deliveries/${id}`, {
         headers: getAuthHeaders(),
@@ -441,17 +496,18 @@ export default function DeliveryQueuePage() {
 
       {/* Schedule Delivery Modal */}
       {showScheduleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => !isSubmitting && setShowScheduleModal(false)}
           />
-          <div className="relative w-full max-w-md overflow-hidden rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-neutral-200">
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-6 shadow-2xl ring-1 ring-neutral-200">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-neutral-900">
+                <h2 className="text-base sm:text-lg font-bold text-neutral-900">
                   Schedule Delivery
                 </h2>
+                <p className="text-xs text-neutral-500 mt-0.5">Book a delivery slot for customer vehicle handover</p>
               </div>
               <button
                 type="button"
@@ -470,18 +526,18 @@ export default function DeliveryQueuePage() {
               </div>
             )}
 
-            <form onSubmit={handleScheduleSubmit} className="mt-6 space-y-4">
+            <form onSubmit={handleScheduleSubmit} className="mt-5 space-y-4">
               {/* Customer * */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">
-                  Customer *
+                <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
+                  Customer <span className="text-rose-500">*</span>
                 </label>
                 <select
                   required
                   value={customerId}
                   onChange={(e) => setCustomerId(e.target.value)}
                   disabled={isFetchingDropdowns || isSubmitting}
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
                 >
                   <option value="">
                     {isFetchingDropdowns
@@ -503,14 +559,14 @@ export default function DeliveryQueuePage() {
 
               {/* Vehicle * */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">
-                  Vehicle *
+                <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
+                  Vehicle <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={vehicleId}
                   onChange={(e) => setVehicleId(e.target.value)}
                   disabled={isFetchingDropdowns || isSubmitting}
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
                 >
                   <option value="">
                     {isFetchingDropdowns
@@ -531,51 +587,54 @@ export default function DeliveryQueuePage() {
                 </select>
               </div>
 
-              {/* Location * */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">
-                  Location *
-                </label>
-                <select
-                  required
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                  disabled={isFetchingDropdowns || isSubmitting}
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-                >
-                  <option value="">
-                    {isFetchingDropdowns
-                      ? "Loading locations..."
-                      : locations.length === 0
-                        ? "No locations available"
-                        : "Select location"}
-                  </option>
-                  {locations.map((loc) => (
-                    <option key={loc._id} value={loc._id}>
-                      {loc.name} {loc.address ? `— ${loc.address}` : ""}
+              {/* Location & Delivery Date in Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Location * */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
+                    Location <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={locationId}
+                    onChange={(e) => setLocationId(e.target.value)}
+                    disabled={isFetchingDropdowns || isSubmitting}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                  >
+                    <option value="">
+                      {isFetchingDropdowns
+                        ? "Loading locations..."
+                        : locations.length === 0
+                          ? "No locations available"
+                          : "Select location"}
                     </option>
-                  ))}
-                </select>
-              </div>
+                    {locations.map((loc) => (
+                      <option key={loc._id} value={loc._id}>
+                        {loc.name} {loc.address ? `— ${loc.address}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Delivery Date & Time * */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">
-                  Delivery Date &amp; Time *
-                </label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  disabled={isSubmitting}
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-                />
+                {/* Delivery Date & Time * */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
+                    Delivery Date &amp; Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    disabled={isSubmitting}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                  />
+                </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">
+                <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
                   Notes
                 </label>
                 <textarea
@@ -584,11 +643,11 @@ export default function DeliveryQueuePage() {
                   onChange={(e) => setNotes(e.target.value)}
                   disabled={isSubmitting}
                   placeholder="Customer requested a morning delivery if possible."
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
                   disabled={isSubmitting}
@@ -600,7 +659,7 @@ export default function DeliveryQueuePage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50 shadow-sm"
                 >
                   {isSubmitting ? (
                     <>
@@ -650,16 +709,20 @@ export default function DeliveryQueuePage() {
             <form onSubmit={handleEditSubmit} className="mt-6 space-y-4">
               {/* Customer */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">Customer *</label>
+                <label className="mb-1.5 block text-xs font-semibold text-neutral-700">Customer <span className="text-rose-500">*</span></label>
                 <select
                   required
                   value={editCustomerId}
                   onChange={(e) => setEditCustomerId(e.target.value)}
                   disabled={isFetchingDropdowns || isEditSubmitting}
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
                 >
                   <option value="">
-                    {isFetchingDropdowns ? "Loading customers..." : customers.length === 0 ? "No customers available" : "Select customer"}
+                    {isFetchingDropdowns
+                      ? "Loading customers..."
+                      : customers.length === 0
+                        ? "No customers available"
+                        : "Select customer"}
                   </option>
                   {customers.map((c) => {
                     const name = `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.name || c.email || c._id;
@@ -672,14 +735,14 @@ export default function DeliveryQueuePage() {
                 </select>
               </div>
 
-              {/* Vehicle */}
+              {/* Vehicle * */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">Vehicle</label>
+                <label className="mb-1.5 block text-xs font-semibold text-neutral-700">Vehicle <span className="text-rose-500">*</span></label>
                 <select
                   value={editVehicleId}
                   onChange={(e) => setEditVehicleId(e.target.value)}
                   disabled={isFetchingDropdowns || isEditSubmitting}
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
                 >
                   <option value="">
                     {isFetchingDropdowns
@@ -700,54 +763,61 @@ export default function DeliveryQueuePage() {
                 </select>
               </div>
 
-              {/* Location */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">Location *</label>
-                <select
-                  required
-                  value={editLocationId}
-                  onChange={(e) => setEditLocationId(e.target.value)}
-                  disabled={isFetchingDropdowns || isEditSubmitting}
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-                >
-                  <option value="">
-                    {isFetchingDropdowns ? "Loading locations..." : locations.length === 0 ? "No locations available" : "Select location"}
-                  </option>
-                  {locations.map((loc) => (
-                    <option key={loc._id} value={loc._id}>
-                      {loc.name} {loc.address ? `— ${loc.address}` : ""}
+              {/* Location & Delivery Date Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Location * */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-neutral-700">Location <span className="text-rose-500">*</span></label>
+                  <select
+                    required
+                    value={editLocationId}
+                    onChange={(e) => setEditLocationId(e.target.value)}
+                    disabled={isFetchingDropdowns || isEditSubmitting}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                  >
+                    <option value="">
+                      {isFetchingDropdowns
+                        ? "Loading locations..."
+                        : locations.length === 0
+                          ? "No locations available"
+                          : "Select location"}
                     </option>
-                  ))}
-                </select>
-              </div>
+                    {locations.map((loc) => (
+                      <option key={loc._id} value={loc._id}>
+                        {loc.name} {loc.address ? `— ${loc.address}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Delivery Date & Time */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">Delivery Date &amp; Time *</label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={editDeliveryDate}
-                  onChange={(e) => setEditDeliveryDate(e.target.value)}
-                  disabled={isEditSubmitting}
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-                />
+                {/* Delivery Date & Time */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-neutral-700">Delivery Date &amp; Time <span className="text-rose-500">*</span></label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={editDeliveryDate}
+                    onChange={(e) => setEditDeliveryDate(e.target.value)}
+                    disabled={isEditSubmitting}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                  />
+                </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-800">Notes</label>
+                <label className="mb-1.5 block text-xs font-semibold text-neutral-700">Notes</label>
                 <textarea
                   rows={3}
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   disabled={isEditSubmitting}
                   placeholder="Customer requested a morning delivery if possible."
-                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
                   disabled={isEditSubmitting}
@@ -759,7 +829,7 @@ export default function DeliveryQueuePage() {
                 <button
                   type="submit"
                   disabled={isEditSubmitting}
-                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50 shadow-sm"
                 >
                   {isEditSubmitting ? (
                     <>
@@ -778,19 +848,19 @@ export default function DeliveryQueuePage() {
 
       {/* Delivery Details Modal (GET /api/v1/schedule-deliveries/:id) */}
       {selectedDelivery && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-xs"
             onClick={() => setSelectedDelivery(null)}
           />
-          <div className="relative w-full max-w-md overflow-hidden rounded-[24px] bg-white p-6 shadow-2xl ring-1 ring-neutral-200">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-[24px] bg-white p-5 sm:p-6 shadow-2xl ring-1 ring-neutral-200">
             <div className="flex items-start justify-between gap-4 border-b border-neutral-100 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
                   <Truck className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-neutral-900">
+                  <h3 className="text-base sm:text-lg font-bold text-neutral-900">
                     Delivery Details
                   </h3>
                   <p className="text-xs font-mono text-neutral-400">
@@ -807,32 +877,32 @@ export default function DeliveryQueuePage() {
               </button>
             </div>
 
-            <div className="mt-5 space-y-4 text-sm">
+            <div className="mt-5 space-y-3 sm:space-y-4 text-sm">
               <div className="flex items-start gap-3 rounded-xl bg-neutral-50 p-3">
-                <User className="mt-0.5 h-4 w-4 text-neutral-400" />
-                <div>
-                  <span className="text-xs font-bold text-neutral-400 uppercase">Customer</span>
-                  <p className="font-semibold text-neutral-800">
+                <User className="mt-0.5 h-4 w-4 text-neutral-400 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Customer</span>
+                  <p className="font-semibold text-neutral-800 text-sm truncate">
                     {getCustomerName(selectedDelivery.customerId)}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3 rounded-xl bg-neutral-50 p-3">
-                <MapPin className="mt-0.5 h-4 w-4 text-neutral-400" />
-                <div>
-                  <span className="text-xs font-bold text-neutral-400 uppercase">Location</span>
-                  <p className="font-semibold text-neutral-800">
+                <MapPin className="mt-0.5 h-4 w-4 text-neutral-400 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Location</span>
+                  <p className="font-semibold text-neutral-800 text-sm truncate">
                     {getLocationName(selectedDelivery.locationId)}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3 rounded-xl bg-neutral-50 p-3">
-                <Clock className="mt-0.5 h-4 w-4 text-neutral-400" />
-                <div>
-                  <span className="text-xs font-bold text-neutral-400 uppercase">Delivery Date</span>
-                  <p className="font-semibold text-neutral-800">
+                <Clock className="mt-0.5 h-4 w-4 text-neutral-400 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Delivery Date</span>
+                  <p className="font-semibold text-neutral-800 text-sm">
                     {selectedDelivery.deliveryDate
                       ? new Date(selectedDelivery.deliveryDate).toLocaleString(undefined, {
                         weekday: "short",
@@ -849,10 +919,10 @@ export default function DeliveryQueuePage() {
 
               {selectedDelivery.notes && (
                 <div className="flex items-start gap-3 rounded-xl bg-neutral-50 p-3">
-                  <FileText className="mt-0.5 h-4 w-4 text-neutral-400" />
-                  <div>
-                    <span className="text-xs font-bold text-neutral-400 uppercase">Notes</span>
-                    <p className="text-neutral-700 text-xs mt-0.5 leading-relaxed">
+                  <FileText className="mt-0.5 h-4 w-4 text-neutral-400 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Notes</span>
+                    <p className="text-neutral-700 text-xs mt-0.5 leading-relaxed break-words">
                       {selectedDelivery.notes}
                     </p>
                   </div>
@@ -860,7 +930,7 @@ export default function DeliveryQueuePage() {
               )}
             </div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-neutral-100 pt-4">
+            <div className="mt-6 flex flex-wrap items-center justify-between border-t border-neutral-100 pt-4 gap-3">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -869,7 +939,7 @@ export default function DeliveryQueuePage() {
                     setSelectedDelivery(null);
                     if (toEdit) openEditModal(toEdit);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
                 >
                   <Pencil className="h-3.5 w-3.5 text-neutral-500" />
                   Edit
@@ -881,7 +951,7 @@ export default function DeliveryQueuePage() {
                     setSelectedDelivery(null);
                     if (id) setConfirmDeleteId(id);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete
@@ -890,7 +960,7 @@ export default function DeliveryQueuePage() {
               <button
                 type="button"
                 onClick={() => setSelectedDelivery(null)}
-                className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors"
+                className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors ml-auto"
               >
                 Close
               </button>
@@ -901,17 +971,17 @@ export default function DeliveryQueuePage() {
 
       {/* Confirm Delete Dialog (DELETE /api/v1/schedule-deliveries/:id) */}
       {confirmDeleteId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => !isDeleting && setConfirmDeleteId(null)}
           />
-          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-neutral-200">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 mb-4">
-              <Trash2 className="h-6 w-6" />
+          <div className="relative w-full max-w-sm overflow-hidden rounded-[24px] bg-white p-5 sm:p-6 shadow-2xl ring-1 ring-neutral-200">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600 mb-4 border border-red-100">
+              <Trash2 className="h-5 w-5" />
             </div>
-            <h3 className="text-base font-bold text-neutral-900">Delete Delivery?</h3>
-            <p className="mt-1.5 text-sm text-neutral-500">
+            <h3 className="text-base sm:text-lg font-bold text-neutral-900">Delete Delivery?</h3>
+            <p className="mt-1.5 text-xs sm:text-sm text-neutral-500 leading-relaxed">
               This action cannot be undone. The scheduled delivery will be permanently removed.
             </p>
             <div className="mt-6 flex items-center justify-end gap-3">
@@ -919,7 +989,7 @@ export default function DeliveryQueuePage() {
                 type="button"
                 disabled={isDeleting}
                 onClick={() => setConfirmDeleteId(null)}
-                className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+                className="rounded-xl border border-neutral-200 bg-white px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -927,7 +997,7 @@ export default function DeliveryQueuePage() {
                 type="button"
                 disabled={isDeleting}
                 onClick={() => handleDeleteDelivery(confirmDeleteId)}
-                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50 shadow-sm"
               >
                 {isDeleting ? (
                   <>
