@@ -373,8 +373,6 @@ export default function DeliveryQueuePage() {
       }
     } catch {
       toast.error("Unable to load delivery details.");
-    } finally {
-      setIsLoadingDetail(false);
     }
   };
 
