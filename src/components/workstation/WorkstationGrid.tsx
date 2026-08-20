@@ -76,12 +76,10 @@ export function WorkstationGrid() {
 
   const handleCardClick = (workstation: Workstation) => {
     if (workstation.slug === "super-admin") {
-      // Open login modal for Super Admin
+      // Open login modal directly for Super Admin
       setLoginTarget(workstation);
-    } else if (workstation.slug === "executive") {
-      router.push(workstation.href);
     } else {
-      // Otherwise, open the site selection modal.
+      // For all other portals: open site selection modal first
       setSelectedRole(workstation);
     }
   };
@@ -94,8 +92,12 @@ export function WorkstationGrid() {
       localStorage.setItem("selectedSite", site.name);
     }
 
-    if (selectedRole) {
-      router.push(`${selectedRole.href}?site=${site._id || site.id}`);
+    const targetWorkstation = selectedRole;
+    setSelectedRole(null);
+
+    // Open login modal after location is selected
+    if (targetWorkstation) {
+      setLoginTarget(targetWorkstation);
     }
   };
 
@@ -239,11 +241,12 @@ export function WorkstationGrid() {
         </div>
       )}
 
-      {/* Super Admin Login Modal */}
+      {/* Portal Login Modal */}
       <LoginModal
         isOpen={loginTarget !== null}
         onClose={() => setLoginTarget(null)}
         redirectHref={loginTarget?.href ?? "/admin"}
+        workstation={loginTarget}
       />
     </section>
   );
