@@ -1,11 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/Panel";
 import { Badge } from "@/components/ui/Badge";
-import { Toolbar } from "@/components/dashboard/Toolbar";
-import { Wrench, Pencil, Trash2, Loader2, Eye } from "lucide-react";
+import {
+  Wrench,
+  Pencil,
+  Trash2,
+  Loader2,
+  Eye,
+  Search,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Plus,
+  X
+} from "lucide-react";
 import { JobCardModal, JobCardStatus } from "@/components/job-cards/JobCardModal";
 import { JobCardDetailsModal } from "@/components/job-cards/JobCardDetailsModal";
 import { API_URL } from "@/lib/config";
@@ -24,18 +36,36 @@ const statusLabel: Record<string, string> = {
   completed: "Completed",
 };
 
+const STATUS_FILTER_OPTIONS = [
+  { label: "All Statuses", value: "ALL" },
+  { label: "Open", value: "open" },
+  { label: "In Progress", value: "in_progress" },
+  { label: "Awaiting Parts", value: "awaiting_parts" },
+  { label: "Completed", value: "completed" },
+];
+
+const ITEMS_PER_PAGE = 20;
+
 export default function AdminJobCardsPage() {
   const [jobCards, setJobCards] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJobCard, setSelectedJobCard] = useState<any | null>(null);
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDetailJobCardId, setSelectedDetailJobCardId] = useState<string | null>(null);
 
-  const fetchJobCards = async () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  const fetchJobCards = async (query = "", page = 1, status = "ALL") => {
     setIsLoading(true);
     setError(null);
     try {
@@ -43,14 +73,36 @@ export default function AdminJobCardsPage() {
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_URL}/job-cards`, { headers });
+      let url = "";
+      if (query.trim()) {
+        url = `${API_URL}/job-cards/search?q=${encodeURIComponent(query.trim())}&page=${page}&limit=${ITEMS_PER_PAGE}`;
+        if (status !== "ALL") {
+          url += `&status=${encodeURIComponent(status)}`;
+        }
+      } else {
+        url = `${API_URL}/job-cards?page=${page}&limit=${ITEMS_PER_PAGE}`;
+        if (status !== "ALL") {
+          url += `&status=${encodeURIComponent(status)}`;
+        }
+      }
+
+      const res = await fetch(url, { headers });
       const data = await res.json();
 
       if (!res.ok) {
         throw new Error(data.message || "Failed to fetch job cards");
       }
 
-      setJobCards(data.data || data || []);
+      const list = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+      setJobCards(list);
+
+      const totalCount =
+        data.meta?.total ??
+        data.total ??
+        data.pagination?.total ??
+        data.totalCount ??
+        list.length;
+      setTotalItems(totalCount);
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -59,8 +111,36 @@ export default function AdminJobCardsPage() {
   };
 
   useEffect(() => {
-    fetchJobCards();
+    const handler = setTimeout(() => {
+      fetchJobCards(searchQuery, currentPage, statusFilter);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery, currentPage, statusFilter]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + jobCards.length;
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (val: string) => {
+    setStatusFilter(val);
+    setCurrentPage(1);
+    setIsStatusDropdownOpen(false);
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this job card?")) return;
@@ -81,6 +161,7 @@ export default function AdminJobCardsPage() {
       }
 
       setJobCards((prev) => prev.filter((jc) => (jc._id || jc.id) !== id));
+      setTotalItems((prev) => Math.max(0, prev - 1));
     } catch (err: any) {
       alert(err.message || "Error deleting job card.");
     }
@@ -104,7 +185,7 @@ export default function AdminJobCardsPage() {
   };
 
   const handleModalSuccess = () => {
-    fetchJobCards();
+    fetchJobCards(searchQuery, currentPage, statusFilter);
   };
 
   const getCustomerDisplay = (jc: any) => {
@@ -127,18 +208,78 @@ export default function AdminJobCardsPage() {
     return "—";
   };
 
+  const selectedStatusLabel =
+    STATUS_FILTER_OPTIONS.find((opt) => opt.value === statusFilter)?.label ||
+    "All Statuses";
+
   return (
     <div>
       <PageHeader
         title="All Job Cards"
         subtitle="Platform-wide service job cards across all sites."
         action={
-          <Toolbar 
-            searchPlaceholder="Search job cards..." 
-            filterLabel="All Statuses" 
-            ctaLabel="New Job Card" 
-            onCtaClick={handleOpenAddModal}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search job cards..."
+                className="w-56 rounded-lg border border-neutral-200 bg-white py-2 pl-9 pr-3 text-sm text-neutral-700 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div ref={filterRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsStatusDropdownOpen((v) => !v)}
+                className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors shadow-2xs"
+              >
+                <span>{selectedStatusLabel}</span>
+                <ChevronDown className="h-4 w-4 text-neutral-400" />
+              </button>
+              {isStatusDropdownOpen && (
+                <div className="absolute right-0 top-full z-20 mt-1.5 w-44 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg">
+                  {STATUS_FILTER_OPTIONS.map((opt) => {
+                    const isSelected = statusFilter === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => handleStatusChange(opt.value)}
+                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-colors ${isSelected
+                          ? "bg-rose-50 font-semibold text-rose-600"
+                          : "text-neutral-700 hover:bg-neutral-100"
+                          }`}
+                      >
+                        <span>{opt.label}</span>
+                        {isSelected && <Check className="h-3.5 w-3.5 text-rose-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAddModal}
+              className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New Job Card
+            </button>
+          </div>
         }
       />
 
@@ -157,7 +298,24 @@ export default function AdminJobCardsPage() {
         </div>
       ) : (
         <>
-          <p className="mb-4 text-sm text-neutral-500">{jobCards.length} job cards</p>
+          <div className="mb-4 flex items-center justify-between text-sm text-neutral-500">
+            <p>
+              Showing{" "}
+              <span className="font-semibold text-neutral-800">
+                {totalItems === 0 ? 0 : startIndex + 1}
+              </span>
+              -
+              <span className="font-semibold text-neutral-800">
+                {Math.min(endIndex, totalItems)}
+              </span>{" "}
+              of <span className="font-semibold text-neutral-800">{totalItems}</span> job cards
+              {statusFilter !== "ALL" && (
+                <span className="ml-1.5 inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600">
+                  Status: {selectedStatusLabel}
+                </span>
+              )}
+            </p>
+          </div>
 
           <Panel padded={false}>
             <div className="overflow-x-auto">
@@ -175,15 +333,17 @@ export default function AdminJobCardsPage() {
                   {jobCards.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-5 py-8 text-center text-neutral-500">
-                        No job cards found. Click "New Job Card" to create one.
+                        {searchQuery || statusFilter !== "ALL"
+                          ? "No job cards matched your search or status filter."
+                          : 'No job cards found. Click "New Job Card" to create one.'}
                       </td>
                     </tr>
                   ) : (
                     jobCards.map((job) => {
                       const id = job._id || job.id;
                       return (
-                        <tr 
-                          key={id} 
+                        <tr
+                          key={id}
                           onClick={(e) => handleOpenDetailModal(id, e)}
                           className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 cursor-pointer transition-colors"
                         >
@@ -243,6 +403,74 @@ export default function AdminJobCardsPage() {
               </table>
             </div>
           </Panel>
+
+          {/* Pagination Controls */}
+          {totalItems > 0 && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-neutral-200 pt-4 text-sm text-neutral-600">
+              <p className="text-xs text-neutral-500">
+                Page <span className="font-semibold text-neutral-800">{currentPage}</span> of{" "}
+                <span className="font-semibold text-neutral-800">{totalPages}</span> (20 per page)
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="flex items-center gap-1 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => {
+                    if (totalPages <= 7) return true;
+                    return p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1;
+                  })
+                  .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && typeof arr[idx - 1] === "number" && (p as number) - (arr[idx - 1] as number) > 1) {
+                      acc.push("...");
+                    }
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) => {
+                    if (typeof p === "string") {
+                      return (
+                        <span key={`dots-${idx}`} className="px-2 text-xs text-neutral-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    const isCurrent = p === currentPage;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setCurrentPage(p)}
+                        className={`min-w-[32px] rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${isCurrent
+                          ? "bg-rose-600 text-white shadow-2xs"
+                          : "border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="flex items-center gap-1 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -257,8 +485,9 @@ export default function AdminJobCardsPage() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         jobCardId={selectedDetailJobCardId}
-        onJobCardUpdated={fetchJobCards}
+        onJobCardUpdated={() => fetchJobCards(searchQuery, currentPage, statusFilter)}
       />
     </div>
   );
 }
+
