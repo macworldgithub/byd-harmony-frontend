@@ -54,8 +54,8 @@ interface VehicleItem {
   make?: string;
   model?: string;
   year?: number | string;
-  customerId?: string | { _id: string; [key: string]: unknown };
-  customer?: string | { _id: string; [key: string]: unknown };
+  customerId?: string | { _id: string;[key: string]: unknown };
+  customer?: string | { _id: string;[key: string]: unknown };
 }
 
 function getAuthHeaders(): HeadersInit {
@@ -66,10 +66,59 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+function getStoredLocationId(): string {
+  if (typeof window === "undefined") return "";
+  let id = (localStorage.getItem("selectedSiteId") || "").trim();
+  if (id) return id;
+
+  const saved = localStorage.getItem("selectedLocation");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      id = (parsed._id || parsed.id || "").trim();
+      if (id) return id;
+    } catch {}
+  }
+
+  const userSaved = localStorage.getItem("user");
+  if (userSaved) {
+    try {
+      const u = JSON.parse(userSaved);
+      id = (
+        u.locationId ||
+        u.location_id ||
+        (typeof u.location === "string" ? u.location : u.location?._id || u.location?.id) ||
+        u.preferredLocationId ||
+        u.siteId ||
+        ""
+      ).trim();
+      if (id) return id;
+    } catch {}
+  }
+  return "";
+}
+
+function getStoredSiteName(): string {
+  if (typeof window === "undefined") return "";
+  const name = (localStorage.getItem("selectedSite") || "").trim();
+  if (name) return name;
+
+  const savedLocStr = localStorage.getItem("selectedLocation");
+  if (savedLocStr) {
+    try {
+      const parsed = JSON.parse(savedLocStr);
+      if (parsed.name) return String(parsed.name).trim();
+    } catch {}
+  }
+  return "";
+}
+
 export default function DeliveryQueuePage() {
   const [deliveries, setDeliveries] = useState<DeliveryItemData[]>([]);
   const [isLoadingDeliveries, setIsLoadingDeliveries] = useState(true);
   const [deliveriesError, setDeliveriesError] = useState<string | null>(null);
+
+  const [activeSiteName] = useState<string>(() => getStoredSiteName());
 
   // Modals state
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -96,13 +145,10 @@ export default function DeliveryQueuePage() {
   const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
   const [isFetchingDropdowns, setIsFetchingDropdowns] = useState(false);
 
-  // Location filter for GET /api/v1/schedule-deliveries?locationId=...
-  const [locationFilter, setLocationFilter] = useState<string>("");
-
   // Form inputs
   const [customerId, setCustomerId] = useState("");
   const [vehicleId, setVehicleId] = useState("");
-  const [locationId, setLocationId] = useState("");
+  const [locationId, setLocationId] = useState<string>(() => getStoredLocationId());
   const [deliveryDate, setDeliveryDate] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -110,14 +156,12 @@ export default function DeliveryQueuePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // 1. GET /api/v1/schedule-deliveries (with optional ?locationId=...)
-  const fetchDeliveries = useCallback(async (locId?: string) => {
+  // 1. GET /api/v1/schedule-deliveries (fetch all deliveries for queue view)
+  const fetchDeliveries = useCallback(async () => {
     setIsLoadingDeliveries(true);
     setDeliveriesError(null);
     try {
-      const url = locId
-        ? `${API_URL}/schedule-deliveries?locationId=${encodeURIComponent(locId)}`
-        : `${API_URL}/schedule-deliveries`;
+      const url = `${API_URL}/schedule-deliveries`;
 
       const res = await fetch(url, { headers: getAuthHeaders() });
       const json = await res.json().catch(() => ({}));
@@ -148,9 +192,19 @@ export default function DeliveryQueuePage() {
         fetch(`${API_URL}/vehicles`, { headers }).then((r) => r.json()).catch(() => ({})),
       ]);
 
+      const locs = Array.isArray(locRes?.data) ? locRes.data : Array.isArray(locRes) ? locRes : [];
       setCustomers(Array.isArray(custRes?.data) ? custRes.data : Array.isArray(custRes) ? custRes : []);
-      setLocations(Array.isArray(locRes?.data) ? locRes.data : Array.isArray(locRes) ? locRes : []);
+      setLocations(locs);
       setVehicles(Array.isArray(vehRes?.data) ? vehRes.data : Array.isArray(vehRes) ? vehRes : []);
+
+      // If locationId is not set yet, set it from localStorage or first location in list
+      setLocationId((prev) => {
+        if (prev) return prev;
+        const stored = getStoredLocationId();
+        if (stored) return stored;
+        if (locs.length > 0) return locs[0]._id;
+        return "";
+      });
     } catch (err) {
       console.error("Failed to load options:", err);
     } finally {
@@ -160,74 +214,18 @@ export default function DeliveryQueuePage() {
 
   // Initial load
   useEffect(() => {
-    let ignore = false;
-    const loadDeliveries = async () => {
-      try {
-        const url = locationFilter
-          ? `${API_URL}/schedule-deliveries?locationId=${encodeURIComponent(locationFilter)}`
-          : `${API_URL}/schedule-deliveries`;
-
-        const res = await fetch(url, { headers: getAuthHeaders() });
-        const json = await res.json().catch(() => ({}));
-
-        if (!ignore) {
-          if (res.ok && json.success) {
-            setDeliveries(Array.isArray(json.data) ? json.data : []);
-          } else {
-            setDeliveries([]);
-            if (!res.ok && res.status !== 404) {
-              setDeliveriesError(json.message || "Failed to load schedule deliveries.");
-            }
-          }
-        }
-      } catch {
-        if (!ignore) {
-          setDeliveriesError("Unable to reach the server.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoadingDeliveries(false);
-        }
-      }
-    };
-
-    loadDeliveries();
-    return () => {
-      ignore = true;
-    };
-  }, [locationFilter]);
+    fetchDeliveries();
+  }, [fetchDeliveries]);
 
   useEffect(() => {
-    let ignore = false;
-    const loadDropdowns = async () => {
-      try {
-        const headers = getAuthHeaders();
-        const [custRes, locRes, vehRes] = await Promise.all([
-          fetch(`${API_URL}/customers`, { headers }).then((r) => r.json()).catch(() => ({})),
-          fetch(`${API_URL}/locations`, { headers }).then((r) => r.json()).catch(() => ({})),
-          fetch(`${API_URL}/vehicles`, { headers }).then((r) => r.json()).catch(() => ({})),
-        ]);
-
-        if (!ignore) {
-          setCustomers(Array.isArray(custRes?.data) ? custRes.data : Array.isArray(custRes) ? custRes : []);
-          setLocations(Array.isArray(locRes?.data) ? locRes.data : Array.isArray(locRes) ? locRes : []);
-          setVehicles(Array.isArray(vehRes?.data) ? vehRes.data : Array.isArray(vehRes) ? vehRes : []);
-        }
-      } catch (err) {
-        console.error("Failed to load options:", err);
-      }
-    };
-
-    loadDropdowns();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    fetchDropdowns();
+  }, [fetchDropdowns]);
 
   const openModal = () => {
+    const locId = getStoredLocationId();
     setCustomerId("");
     setVehicleId("");
-    setLocationId("");
+    setLocationId(locId);
     setDeliveryDate("");
     setNotes("");
     setSubmitError(null);
@@ -295,7 +293,7 @@ export default function DeliveryQueuePage() {
         toast.success(data.message || "Delivery updated successfully!");
         setShowEditModal(false);
         setEditingDeliveryId(null);
-        fetchDeliveries(locationFilter || undefined);
+        fetchDeliveries();
       } else {
         setEditError(data.message || "Failed to update delivery.");
       }
@@ -310,11 +308,26 @@ export default function DeliveryQueuePage() {
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    let targetLocId = (locationId || getStoredLocationId()).trim();
+
+    if (!targetLocId && locations.length > 0) {
+      const siteName = (getStoredSiteName() || activeSiteName).toLowerCase();
+      if (siteName) {
+        const matched = locations.find(
+          (l) => l.name.toLowerCase() === siteName || l.name.toLowerCase().includes(siteName)
+        );
+        if (matched) targetLocId = matched._id;
+      }
+      if (!targetLocId) {
+        targetLocId = locations[0]._id;
+      }
+    }
+
     if (!customerId) {
       setSubmitError("Please select a customer.");
       return;
     }
-    if (!locationId) {
+    if (!targetLocId) {
       setSubmitError("Please select a location.");
       return;
     }
@@ -331,7 +344,7 @@ export default function DeliveryQueuePage() {
 
       const payload = {
         customerId,
-        locationId,
+        locationId: targetLocId,
         deliveryDate: isoDate,
         notes: notes.trim(),
       };
@@ -347,7 +360,7 @@ export default function DeliveryQueuePage() {
       if (res.ok && data.success) {
         toast.success(data.message || "Delivery scheduled successfully!");
         setShowScheduleModal(false);
-        fetchDeliveries(locationFilter || undefined);
+        fetchDeliveries();
       } else {
         setSubmitError(data.message || "Failed to schedule delivery.");
       }
@@ -390,7 +403,7 @@ export default function DeliveryQueuePage() {
         toast.success(data.message || "Delivery deleted successfully!");
         setConfirmDeleteId(null);
         setSelectedDelivery(null);
-        fetchDeliveries(locationFilter || undefined);
+        fetchDeliveries();
       } else {
         toast.error(data.message || "Failed to delete delivery.");
         setConfirmDeleteId(null);
@@ -492,6 +505,8 @@ export default function DeliveryQueuePage() {
         }
       />
 
+
+
       {/* Schedule Delivery Modal */}
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
@@ -524,7 +539,7 @@ export default function DeliveryQueuePage() {
               </div>
             )}
 
-            <form onSubmit={handleScheduleSubmit} className="mt-5 space-y-4">
+            <form onSubmit={handleScheduleSubmit} className="mt-6 space-y-4">
               {/* Customer * */}
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
@@ -542,7 +557,7 @@ export default function DeliveryQueuePage() {
                       ? "Loading customers..."
                       : customers.length === 0
                         ? "No customers available"
-                        : "Select customer"}
+                        : "Select Customer"}
                   </option>
                   {customers.map((c) => {
                     const name = `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.name || c.email || c._id;
@@ -585,49 +600,25 @@ export default function DeliveryQueuePage() {
                 </select>
               </div>
 
-              {/* Location & Delivery Date in Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Location * */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
-                    Location <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={locationId}
-                    onChange={(e) => setLocationId(e.target.value)}
-                    disabled={isFetchingDropdowns || isSubmitting}
-                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
-                  >
-                    <option value="">
-                      {isFetchingDropdowns
-                        ? "Loading locations..."
-                        : locations.length === 0
-                          ? "No locations available"
-                          : "Select location"}
-                    </option>
-                    {locations.map((loc) => (
-                      <option key={loc._id} value={loc._id}>
-                        {loc.name} {loc.address ? `— ${loc.address}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Active Site Read-Only Badge */}
+              <div className="rounded-xl border border-rose-100 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
+                <span>Assigned Location: {activeSiteName || locationId || "Selected Site"}</span>
+              </div>
 
-                {/* Delivery Date & Time * */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
-                    Delivery Date &amp; Time <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
-                    disabled={isSubmitting}
-                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
-                  />
-                </div>
+              {/* Delivery Date & Time * */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
+                  Delivery Date &amp; Time <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                />
               </div>
 
               {/* Notes */}
@@ -1040,22 +1031,6 @@ export default function DeliveryQueuePage() {
               title="Today's Deliveries"
               action={<Truck className="h-4 w-4 text-rose-500 ml-2" />}
             />
-            {/* Location filter dropdown for GET /api/v1/schedule-deliveries?locationId=... */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-neutral-500">Filter Location:</span>
-              <select
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs text-neutral-700 shadow-2xs outline-none focus:border-rose-300"
-              >
-                <option value="">All Locations</option>
-                {locations.map((loc) => (
-                  <option key={loc._id} value={loc._id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="p-5">
