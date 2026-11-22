@@ -7,7 +7,7 @@ export function TopBar() {
         <div className="flex items-center gap-2">
           <Image
             src="/logo.png"
-            alt="Good Showroom"
+            alt="BYD Harmony"
             width={120}
             height={24}
             priority
